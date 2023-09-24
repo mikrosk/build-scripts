@@ -92,9 +92,11 @@ ldg.ok:
 	rm -rf ldg-${LDG_BRANCH}
 	svn export ${LDG_URL} ldg-${LDG_BRANCH}
 	cd ldg-${LDG_BRANCH}/src/devel \
-		&& make -f gcc.mak CC=${TOOL_PREFIX}-gcc AR=m${TOOL_PREFIX}-ar
-		#&& make -f gccm68020-60.mak CC=${TOOL_PREFIX}-gcc AR=m${TOOL_PREFIX}-ar
-		#&& make -f gccm5475.mak CC=${TOOL_PREFIX}-gcc AR=m${TOOL_PREFIX}-ar
+		&& make -f gcc.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
+		&& make -f gccm68020-60.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
+		&& make -f gccm5475.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
+		&& cp -ra ../../lib/gcc/* ${SYS_ROOT}/usr/lib && cp -ra ../../include ${SYS_ROOT}/usr
+	touch $@
 
 .PHONY: clean
 clean:
