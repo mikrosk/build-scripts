@@ -37,7 +37,7 @@ libxmp.tar.gz:
 	wget -q -O $@ $(LIBXMP_URL)
 
 .PHONY: build
-build: zlib.ok gemlib.ok sdl.ok mintlib.ok libxmp.ok ldg.ok
+build: zlib.ok gemlib.ok ldg.ok sdl.ok mintlib.ok libxmp.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -56,6 +56,16 @@ gemlib.ok:
 	cd gemlib-${GEMLIB_BRANCH} \
 		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr \
 		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr install
+	touch $@
+
+ldg.ok:
+	rm -rf ldg-${LDG_BRANCH}
+	svn export ${LDG_URL} ldg-${LDG_BRANCH}
+	cd ldg-${LDG_BRANCH}/src/devel \
+		&& make -f gcc.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
+		&& make -f gccm68020-60.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
+		&& make -f gccm5475.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
+		&& cp -ra ../../lib/gcc/* ${SYS_ROOT}/usr/lib && cp -ra ../../include ${SYS_ROOT}/usr
 	touch $@
 
 sdl.ok:
@@ -88,17 +98,7 @@ libxmp.ok:
 		&& CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=${TOOL_PREFIX} --disable-it --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 && make && make install
 	touch $@
 
-ldg.ok:
-	rm -rf ldg-${LDG_BRANCH}
-	svn export ${LDG_URL} ldg-${LDG_BRANCH}
-	cd ldg-${LDG_BRANCH}/src/devel \
-		&& make -f gcc.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
-		&& make -f gccm68020-60.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
-		&& make -f gccm5475.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
-		&& cp -ra ../../lib/gcc/* ${SYS_ROOT}/usr/lib && cp -ra ../../include ${SYS_ROOT}/usr
-	touch $@
-
 .PHONY: clean
 clean:
 	rm -f *.ok
-	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} SDL-1.2-${SDL_BRANCH} mintlib-${MINTLIB_BRANCH} libxmp-lite-${LIBXMP_VERSION} ldg-${LDG_BRANCH}
+	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} mintlib-${MINTLIB_BRANCH} libxmp-lite-${LIBXMP_VERSION}
