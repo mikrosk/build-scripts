@@ -1,0 +1,8 @@
+*.tar.gz
+*.ok
+zlib-1.?/
+gemlib-master/
+SDL-1.2-main/
+mintlib-dlmalloc/
+libxmp-lite-4.?.?/
+ldg-trunk/
