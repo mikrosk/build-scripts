@@ -87,10 +87,11 @@ mintlib.ok:
 		&& make CROSS_TOOL=${TOOL_PREFIX} install
 	touch $@
 
-libxmp.ok:
+libxmp.ok: libxmp-lite.patch
 	rm -rf libxmp-lite-${LIBXMP_VERSION}
 	tar xzf libxmp.tar.gz
 	cd libxmp-lite-${LIBXMP_VERSION} \
+		&& cat ../libxmp-lite.patch | patch -p1 \
 		&& CFLAGS='-O2 -fomit-frame-pointer -m68000' ./configure --host=${TOOL_PREFIX} --disable-it --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --bindir=${SYS_ROOT}/usr/bin && make && make install \
 		&& make distclean \
 		&& CFLAGS='-O2 -fomit-frame-pointer -m68020-60' ./configure --host=${TOOL_PREFIX} --disable-it --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m68020-60 --bindir=${SYS_ROOT}/usr/bin/m68020-60 && make && make install \
