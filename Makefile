@@ -8,6 +8,7 @@ SDL_BRANCH		= main
 MINTLIB_BRANCH	= dlmalloc
 LIBXMP_VERSION	= 4.6.0
 LDG_BRANCH		= trunk
+PHYSFS_BRANCH	= m68k-atari-mint
 
 ZLIB_URL		= https://www.zlib.net/zlib-$(ZLIB_VERSION).tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/$(GEMLIB_BRANCH).tar.gz
@@ -15,11 +16,12 @@ SDL_URL			= https://github.com/mikrosk/SDL-1.2/archive/refs/heads/$(SDL_BRANCH).
 MINTLIB_URL		= https://github.com/mikrosk/mintlib/archive/refs/heads/$(MINTLIB_BRANCH).tar.gz
 LIBXMP_URL		= https://github.com/libxmp/libxmp/releases/download/libxmp-4.6.0/libxmp-lite-${LIBXMP_VERSION}.tar.gz
 LDG_URL			= https://svn.code.sf.net/p/ldg/code/${LDG_BRANCH}/ldg
+PHYSFS_URL		= https://github.com/pmandin/physfs/archive/refs/heads/${PHYSFS_BRANCH}.tar.gz
 
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz mintlib.tar.gz libxmp.tar.gz
+download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz mintlib.tar.gz libxmp.tar.gz physfs.tar.gz
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL)
@@ -36,8 +38,11 @@ mintlib.tar.gz:
 libxmp.tar.gz:
 	wget -q -O $@ $(LIBXMP_URL)
 
+physfs.tar.gz:
+	wget -q -O $@ $(PHYSFS_URL)
+
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok sdl.ok mintlib.ok libxmp.ok
+build: zlib.ok gemlib.ok ldg.ok sdl.ok mintlib.ok libxmp.ok physfs.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -99,7 +104,22 @@ libxmp.ok: libxmp-lite.patch
 		&& CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=${TOOL_PREFIX} --disable-it --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 && make && make install
 	touch $@
 
+physfs.ok: freemint.cmake
+	rm -rf physfs-${PHYSFS_BRANCH}
+	tar xzf physfs.tar.gz
+	cd physfs-${PHYSFS_BRANCH} \
+		&& mkdir build && cd build \
+			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin .. && make VERBOSE=1 && make install \
+			&& cd - \
+		&& mkdir build020 && cd build020 \
+			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer -m68020-60" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=lib/m68020-60 -DCMAKE_INSTALL_BINDIR=bin/m68020-60 .. && make VERBOSE=1 && make install \
+			&& cd - \
+		&& mkdir buildcf && cd buildcf \
+			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer -mcpu=5475" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=lib/m5475 -DCMAKE_INSTALL_BINDIR=bin/m5475 .. && make VERBOSE=1 && make install \
+			&& cd -
+	touch $@
+
 .PHONY: clean
 clean:
-	rm -f *.ok
-	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} mintlib-${MINTLIB_BRANCH} libxmp-lite-${LIBXMP_VERSION}
+	rm -f *.ok *.tar.gz
+	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} mintlib-${MINTLIB_BRANCH} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH}
