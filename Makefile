@@ -9,6 +9,7 @@ MINTLIB_BRANCH	= dlmalloc
 LIBXMP_VERSION	= 4.6.0
 LDG_BRANCH		= trunk
 PHYSFS_BRANCH	= m68k-atari-mint
+CFLIB_BRANCH	= master
 
 ZLIB_URL		= https://www.zlib.net/zlib-$(ZLIB_VERSION).tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/$(GEMLIB_BRANCH).tar.gz
@@ -17,11 +18,12 @@ MINTLIB_URL		= https://github.com/mikrosk/mintlib/archive/refs/heads/$(MINTLIB_B
 LIBXMP_URL		= https://github.com/libxmp/libxmp/releases/download/libxmp-4.6.0/libxmp-lite-${LIBXMP_VERSION}.tar.gz
 LDG_URL			= https://svn.code.sf.net/p/ldg/code/${LDG_BRANCH}/ldg
 PHYSFS_URL		= https://github.com/pmandin/physfs/archive/refs/heads/${PHYSFS_BRANCH}.tar.gz
+CFLIB_URL		= https://github.com/freemint/cflib/archive/refs/heads/$(CFLIB_BRANCH).tar.gz
 
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz mintlib.tar.gz libxmp.tar.gz physfs.tar.gz
+download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz mintlib.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL)
@@ -41,8 +43,11 @@ libxmp.tar.gz:
 physfs.tar.gz:
 	wget -q -O $@ $(PHYSFS_URL)
 
+cflib.tar.gz:
+	wget -q -O $@ $(CFLIB_URL)
+
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok sdl.ok mintlib.ok libxmp.ok physfs.ok
+build: zlib.ok gemlib.ok ldg.ok sdl.ok mintlib.ok libxmp.ok physfs.ok cflib.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -119,7 +124,15 @@ physfs.ok: freemint.cmake
 			&& cd -
 	touch $@
 
+cflib.ok:
+	rm -rf cflib-${CFLIB_BRANCH}
+	tar xzf cflib.tar.gz
+	cd cflib-${CFLIB_BRANCH} \
+		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr \
+		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr install
+	touch $@
+
 .PHONY: clean
 clean:
 	rm -f *.ok *.tar.gz
-	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} mintlib-${MINTLIB_BRANCH} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH}
+	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} mintlib-${MINTLIB_BRANCH} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH}
