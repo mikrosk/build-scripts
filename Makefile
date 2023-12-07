@@ -10,6 +10,7 @@ LIBXMP_VERSION	= 4.6.0
 LDG_BRANCH		= trunk
 PHYSFS_BRANCH	= m68k-atari-mint
 CFLIB_BRANCH	= master
+LIBPNG_VERSION	= 1.6.40
 
 ZLIB_URL		= https://www.zlib.net/zlib-$(ZLIB_VERSION).tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/$(GEMLIB_BRANCH).tar.gz
@@ -19,11 +20,12 @@ LIBXMP_URL		= https://github.com/libxmp/libxmp/releases/download/libxmp-4.6.0/li
 LDG_URL			= https://svn.code.sf.net/p/ldg/code/${LDG_BRANCH}/ldg
 PHYSFS_URL		= https://github.com/pmandin/physfs/archive/refs/heads/${PHYSFS_BRANCH}.tar.gz
 CFLIB_URL		= https://github.com/freemint/cflib/archive/refs/heads/$(CFLIB_BRANCH).tar.gz
+LIBPNG_URL		= https://download.sourceforge.net/libpng/libpng-${LIBPNG_VERSION}.tar.gz
 
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz mintlib.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz
+download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz mintlib.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL)
@@ -46,8 +48,11 @@ physfs.tar.gz:
 cflib.tar.gz:
 	wget -q -O $@ $(CFLIB_URL)
 
+libpng.tar.gz:
+	wget -q -O $@ $(LIBPNG_URL)
+
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok sdl.ok mintlib.ok libxmp.ok physfs.ok cflib.ok
+build: zlib.ok gemlib.ok ldg.ok sdl.ok mintlib.ok libxmp.ok physfs.ok cflib.ok libpng.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -130,6 +135,17 @@ cflib.ok:
 	cd cflib-${CFLIB_BRANCH} \
 		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr \
 		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr install
+	touch $@
+
+libpng.ok:
+	rm -rf libpng-${LIBPNG_VERSION}
+	tar xzf libpng.tar.gz
+	cd libpng-${LIBPNG_VERSION} \
+		&& CFLAGS='-O2 -fomit-frame-pointer -m68000' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --bindir=${SYS_ROOT}/usr/bin && make && make install \
+		&& make distclean \
+		&& CFLAGS='-O2 -fomit-frame-pointer -m68020-60' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m68020-60 --bindir=${SYS_ROOT}/usr/bin/m68020-60 && make && make install \
+		&& make distclean \
+		&& CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 && make && make install
 	touch $@
 
 .PHONY: clean
