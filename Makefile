@@ -14,7 +14,7 @@ LIBPNG_VERSION	= 1.6.40
 
 ZLIB_URL		= https://www.zlib.net/zlib-$(ZLIB_VERSION).tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/$(GEMLIB_BRANCH).tar.gz
-SDL_URL			= https://github.com/mikrosk/SDL-1.2/archive/refs/heads/$(SDL_BRANCH).tar.gz
+SDL_URL			= https://github.com/libsdl-org/SDL-1.2/archive/refs/heads/$(SDL_BRANCH).tar.gz
 MINTLIB_URL		= https://github.com/mikrosk/mintlib/archive/refs/heads/$(MINTLIB_BRANCH).tar.gz
 LIBXMP_URL		= https://github.com/libxmp/libxmp/releases/download/libxmp-4.6.0/libxmp-lite-${LIBXMP_VERSION}.tar.gz
 LDG_URL			= https://svn.code.sf.net/p/ldg/code/${LDG_BRANCH}/ldg
