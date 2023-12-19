@@ -103,8 +103,8 @@ mintlib.ok:
 	rm -rf mintlib-${MINTLIB_BRANCH}
 	tar xzf mintlib.tar.gz
 	cd mintlib-${MINTLIB_BRANCH} \
-		&& make CROSS_TOOL=${TOOL_PREFIX} \
-		&& make CROSS_TOOL=${TOOL_PREFIX} install
+		&& make CROSS_TOOL=${TOOL_PREFIX} WITH_DEBUG_LIB=no \
+		&& make CROSS_TOOL=${TOOL_PREFIX} WITH_DEBUG_LIB=no install
 	touch $@
 
 libxmp.ok: libxmp-lite.patch
