@@ -1,8 +1,8 @@
-#TOOL_PREFIX		:= m68k-atari-mintelf
-TOOL_PREFIX		:= m68k-atari-mint
+TOOL_PREFIX		:= m68k-atari-mintelf
+#TOOL_PREFIX		:= m68k-atari-mint
 SYS_ROOT		:= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
 
-ZLIB_VERSION	= 1.3
+ZLIB_VERSION	= 1.3.1
 GEMLIB_BRANCH	= master
 SDL_BRANCH		= main
 MINTLIB_BRANCH	= dlmalloc
