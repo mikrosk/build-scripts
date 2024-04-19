@@ -129,18 +129,18 @@ libxmp.ok: libxmp-lite.patch
 		&& CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=${TOOL_PREFIX} --disable-it --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 && make && make install
 	touch $@
 
-physfs.ok: freemint.cmake
+physfs.ok: freemint-${TOOL_PREFIX}.cmake
 	rm -rf physfs-${PHYSFS_BRANCH}
 	tar xzf physfs.tar.gz
 	cd physfs-${PHYSFS_BRANCH} \
 		&& mkdir build && cd build \
-			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin .. && make VERBOSE=1 && make install \
+			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint-${TOOL_PREFIX}.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin .. && make VERBOSE=1 && make install \
 			&& cd - \
 		&& mkdir build020 && cd build020 \
-			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer -m68020-60" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=lib/m68020-60 -DCMAKE_INSTALL_BINDIR=bin/m68020-60 .. && make VERBOSE=1 && make install \
+			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint-${TOOL_PREFIX}.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer -m68020-60" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=lib/m68020-60 -DCMAKE_INSTALL_BINDIR=bin/m68020-60 .. && make VERBOSE=1 && make install \
 			&& cd - \
 		&& mkdir buildcf && cd buildcf \
-			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer -mcpu=5475" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=lib/m5475 -DCMAKE_INSTALL_BINDIR=bin/m5475 .. && make VERBOSE=1 && make install \
+			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint-${TOOL_PREFIX}.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer -mcpu=5475" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=lib/m5475 -DCMAKE_INSTALL_BINDIR=bin/m5475 .. && make VERBOSE=1 && make install \
 			&& cd -
 	touch $@
 
