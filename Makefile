@@ -181,9 +181,15 @@ usound.ok:
 libcmini.ok:
 	rm -rf libcmini-${LIBCMINI_BRANCH}
 	tar xzf libcmini.tar.gz
+ifeq ($(TOOL_PREFIX),m68k-atari-mintelf)
 	cd libcmini-${LIBCMINI_BRANCH} \
-		&& make CROSSPREFIX=${TOOL_PREFIX}- PREFIX=${SYS_ROOT}/opt/libcmini BUILD_FAST=N BUILD_SOFT_FLOAT=N VERBOSE=yes \
-		&& make CROSSPREFIX=${TOOL_PREFIX}- PREFIX=${SYS_ROOT}/opt/libcmini BUILD_FAST=N BUILD_SOFT_FLOAT=N VERBOSE=yes install
+		&& make PREFIX=${SYS_ROOT}/opt/libcmini BUILD_FAST=N BUILD_SOFT_FLOAT=N COMPILE_ELF=Y VERBOSE=yes \
+		&& make PREFIX=${SYS_ROOT}/opt/libcmini BUILD_FAST=N BUILD_SOFT_FLOAT=N COMPILE_ELF=Y VERBOSE=yes install
+else
+	cd libcmini-${LIBCMINI_BRANCH} \
+		&& make PREFIX=${SYS_ROOT}/opt/libcmini BUILD_FAST=N BUILD_SOFT_FLOAT=N COMPILE_ELF=N VERBOSE=yes \
+		&& make PREFIX=${SYS_ROOT}/opt/libcmini BUILD_FAST=N BUILD_SOFT_FLOAT=N COMPILE_ELF=N VERBOSE=yes install
+endif
 	touch $@
 
 .PHONY: clean
