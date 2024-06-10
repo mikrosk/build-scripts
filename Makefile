@@ -79,8 +79,8 @@ gemlib.ok:
 	rm -rf gemlib-${GEMLIB_BRANCH}
 	tar xzf gemlib.tar.gz
 	cd gemlib-${GEMLIB_BRANCH} \
-		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr \
-		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr install
+		&& make CROSS_TOOL=${TOOL_PREFIX} DESTDIR=${SYS_ROOT} PREFIX=/usr V=1 \
+		&& make CROSS_TOOL=${TOOL_PREFIX} DESTDIR=${SYS_ROOT} PREFIX=/usr V=1 install
 	touch $@
 
 ldg.ok:
@@ -135,8 +135,8 @@ cflib.ok:
 	rm -rf cflib-${CFLIB_BRANCH}
 	tar xzf cflib.tar.gz
 	cd cflib-${CFLIB_BRANCH} \
-		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr \
-		&& make CROSS_TOOL=${TOOL_PREFIX} PREFIX=${SYS_ROOT}/usr install
+		&& make CROSS_TOOL=${TOOL_PREFIX} DESTDIR=${SYS_ROOT} PREFIX=/usr V=1 \
+		&& make CROSS_TOOL=${TOOL_PREFIX} DESTDIR=${SYS_ROOT} PREFIX=/usr V=1 install
 	touch $@
 
 libpng.ok:
