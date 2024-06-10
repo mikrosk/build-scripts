@@ -183,4 +183,4 @@ endif
 clean:
 	rm -f *.ok *.tar.gz
 	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} \
-		libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} usound.h libcmini-${LIBCMINI_BRANCH}
+		libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} usound.h libcmini-${LIBCMINI_BRANCH}
