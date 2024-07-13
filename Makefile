@@ -11,7 +11,7 @@ PHYSFS_BRANCH	= m68k-atari-mint
 CFLIB_BRANCH	= master
 LIBPNG_VERSION	= 1.6.43
 SDL_IMAGE_BRANCH= SDL-1.2
-ASS_BRANCH		= main
+USOUND_BRANCH	= main
 LIBCMINI_BRANCH	= master
 
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
@@ -23,7 +23,7 @@ PHYSFS_URL		= https://github.com/pmandin/physfs/archive/refs/heads/${PHYSFS_BRAN
 CFLIB_URL		= https://github.com/freemint/cflib/archive/refs/heads/${CFLIB_BRANCH}.tar.gz
 LIBPNG_URL		= https://download.sourceforge.net/libpng/libpng-${LIBPNG_VERSION}.tar.gz
 SDL_IMAGE_URL	= https://github.com/libsdl-org/SDL_image/archive/refs/heads/${SDL_IMAGE_BRANCH}.tar.gz
-ASS_URL			= https://raw.githubusercontent.com/mikrosk/atari_sound_setup/${ASS_BRANCH}/atari_sound_setup.h
+USOUND_URL		= https://raw.githubusercontent.com/mikrosk/usound/${USOUND_BRANCH}/usound.h
 LIBCMINI_URL	= https://github.com/freemint/libcmini/archive/refs/heads/${LIBCMINI_BRANCH}.tar.gz
 
 default: download build
@@ -56,7 +56,7 @@ sdl_image.tar.gz:
 	wget -q -O $@ $(SDL_IMAGE_URL)
 
 usound.h:
-	wget -q -O $@ $(ASS_URL)
+	wget -q -O $@ $(USOUND_URL)
 
 libcmini.tar.gz:
 	wget -q -O $@ $(LIBCMINI_URL)
