@@ -13,6 +13,7 @@ LIBPNG_VERSION	= 1.6.44
 SDL_IMAGE_BRANCH= SDL-1.2
 USOUND_BRANCH	= main
 LIBCMINI_BRANCH	= master
+SDL_MIXER_BRANCH= SDL-1.2
 
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/${GEMLIB_BRANCH}.tar.gz
@@ -25,11 +26,12 @@ LIBPNG_URL		= https://download.sourceforge.net/libpng/libpng-${LIBPNG_VERSION}.t
 SDL_IMAGE_URL	= https://github.com/libsdl-org/SDL_image/archive/refs/heads/${SDL_IMAGE_BRANCH}.tar.gz
 USOUND_URL		= https://raw.githubusercontent.com/mikrosk/usound/${USOUND_BRANCH}/usound.h
 LIBCMINI_URL	= https://github.com/freemint/libcmini/archive/refs/heads/${LIBCMINI_BRANCH}.tar.gz
+SDL_MIXER_URL	= https://github.com/mikrosk/SDL_mixer-1.2/archive/refs/heads/${SDL_MIXER_BRANCH}.tar.gz
 
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz
+download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz sdl_mixer.tar.gz
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL)
@@ -61,8 +63,11 @@ usound.h:
 libcmini.tar.gz:
 	wget -q -O $@ $(LIBCMINI_URL)
 
+sdl_mixer.tar.gz:
+	wget -q -O $@ $(SDL_MIXER_URL)
+
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok
+build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok sdl_mixer.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -179,8 +184,23 @@ else
 endif
 	touch $@
 
+sdl_mixer.ok:
+	rm -rf SDL_mixer-1.2-${SDL_MIXER_BRANCH}
+	tar xzf sdl_mixer.tar.gz
+	cd SDL_mixer-1.2-${SDL_MIXER_BRANCH} \
+		&& PKG_CONFIG_LIBDIR=${SYS_ROOT}/usr/lib/pkgconfig CFLAGS='-O2 -fomit-frame-pointer -m68000' LDFLAGS='-m68000' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --bindir=${SYS_ROOT}/usr/bin \
+			--disable-music-mod --disable-music-timidity-midi --disable-music-fluidsynth-midi --disable-music-ogg --disable-music-flac --disable-music-mp3 && make && make install \
+		&& make distclean \
+		&& PKG_CONFIG_LIBDIR=${SYS_ROOT}/usr/lib/m68020-60/pkgconfig CFLAGS='-O2 -fomit-frame-pointer -m68020-60' LDFLAGS='-m68020-60' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m68020-60 --bindir=${SYS_ROOT}/usr/bin/m68020-60 \
+			--disable-music-mod --disable-music-timidity-midi --disable-music-fluidsynth-midi --disable-music-ogg --disable-music-flac --disable-music-mp3 && make && make install \
+		&& make distclean \
+		&& PKG_CONFIG_LIBDIR=${SYS_ROOT}/usr/lib/m5475/pkgconfig CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' LDFLAGS='-mcpu=5475' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 \
+			--disable-music-mod --disable-music-timidity-midi --disable-music-fluidsynth-midi --disable-music-ogg --disable-music-flac --disable-music-mp3 && make && make install
+	touch $@
+
 .PHONY: clean
 clean:
 	rm -f *.ok *.tar.gz
 	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} \
-		libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} usound.h libcmini-${LIBCMINI_BRANCH}
+		libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} usound.h libcmini-${LIBCMINI_BRANCH} \
+		SDL_mixer-1.2-${SDL_MIXER_BRANCH}
