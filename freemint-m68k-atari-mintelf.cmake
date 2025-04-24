@@ -1,3 +1,5 @@
+set(UNIX 1)
+
 # the name of the target operating system
 set(CMAKE_SYSTEM_NAME FreeMiNT)
 
