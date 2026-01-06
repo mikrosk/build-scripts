@@ -5,20 +5,21 @@ SYS_ROOT		:= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
 ZLIB_VERSION	= 1.3.1
 GEMLIB_BRANCH	= master
 SDL_BRANCH		= main
-LIBXMP_VERSION	= 4.6.0
+LIBXMP_VERSION	= 4.6.3
 LDG_BRANCH		= trunk
 PHYSFS_BRANCH	= m68k-atari-mint
 CFLIB_BRANCH	= master
-LIBPNG_VERSION	= 1.6.44
+LIBPNG_VERSION	= 1.6.53
 SDL_IMAGE_BRANCH= SDL-1.2
 USOUND_BRANCH	= main
 LIBCMINI_BRANCH	= master
 SDL_MIXER_BRANCH= SDL-1.2
+ASAP_VERSION	= 7.0.0
 
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/${GEMLIB_BRANCH}.tar.gz
 SDL_URL			= https://github.com/libsdl-org/SDL-1.2/archive/refs/heads/${SDL_BRANCH}.tar.gz
-LIBXMP_URL		= https://github.com/libxmp/libxmp/releases/download/libxmp-4.6.0/libxmp-lite-${LIBXMP_VERSION}.tar.gz
+LIBXMP_URL		= https://github.com/libxmp/libxmp/releases/download/libxmp-${LIBXMP_VERSION}/libxmp-lite-${LIBXMP_VERSION}.tar.gz
 LDG_URL			= https://svn.code.sf.net/p/ldg/code/${LDG_BRANCH}/ldg
 PHYSFS_URL		= https://github.com/pmandin/physfs/archive/refs/heads/${PHYSFS_BRANCH}.tar.gz
 CFLIB_URL		= https://github.com/freemint/cflib/archive/refs/heads/${CFLIB_BRANCH}.tar.gz
@@ -27,11 +28,12 @@ SDL_IMAGE_URL	= https://github.com/libsdl-org/SDL_image/archive/refs/heads/${SDL
 USOUND_URL		= https://raw.githubusercontent.com/mikrosk/usound/${USOUND_BRANCH}/usound.h
 LIBCMINI_URL	= https://github.com/freemint/libcmini/archive/refs/heads/${LIBCMINI_BRANCH}.tar.gz
 SDL_MIXER_URL	= https://github.com/mikrosk/SDL_mixer-1.2/archive/refs/heads/${SDL_MIXER_BRANCH}.tar.gz
+ASAP_URL		= https://sourceforge.net/projects/asap/files/asap/${ASAP_VERSION}/asap-${ASAP_VERSION}.tar.gz/download
 
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz sdl_mixer.tar.gz
+download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL)
@@ -66,8 +68,11 @@ libcmini.tar.gz:
 sdl_mixer.tar.gz:
 	wget -q -O $@ $(SDL_MIXER_URL)
 
+asap.tar.gz:
+	wget -q -O $@ $(ASAP_URL)
+
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok sdl_mixer.ok
+build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok sdl_mixer.ok asap.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -196,6 +201,20 @@ sdl_mixer.ok:
 		&& make distclean \
 		&& PKG_CONFIG_LIBDIR=${SYS_ROOT}/usr/lib/m5475/pkgconfig CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' LDFLAGS='-mcpu=5475' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 \
 			--disable-music-mod --disable-music-timidity-midi --disable-music-fluidsynth-midi --disable-music-ogg --disable-music-flac --disable-music-mp3 && make && make install
+	touch $@
+
+asap.ok:
+	rm -rf asap-${ASAP_VERSION}
+	tar xzf asap.tar.gz
+	cd asap-${ASAP_VERSION} \
+		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68000' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib bindir=${SYS_ROOT}/usr/bin \
+		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68000' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib bindir=${SYS_ROOT}/usr/bin install \
+		&& rm asap.o libasap.a asapconv \
+		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68020-60' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m68020-60 bindir=${SYS_ROOT}/usr/bin/m68020-60 \
+		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68020-60' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m68020-60 bindir=${SYS_ROOT}/usr/bin/m68020-60 install \
+		&& rm asap.o libasap.a asapconv \
+		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m5475 bindir=${SYS_ROOT}/usr/bin/m5475 \
+		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m5475 bindir=${SYS_ROOT}/usr/bin/m5475 install
 	touch $@
 
 .PHONY: clean
