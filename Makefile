@@ -15,6 +15,7 @@ USOUND_BRANCH	= main
 LIBCMINI_BRANCH	= master
 SDL_MIXER_BRANCH= SDL-1.2
 ASAP_VERSION	= 7.0.0
+MPG123_VERSION	= 1.33.4
 
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/${GEMLIB_BRANCH}.tar.gz
@@ -29,11 +30,12 @@ USOUND_URL		= https://raw.githubusercontent.com/mikrosk/usound/${USOUND_BRANCH}/
 LIBCMINI_URL	= https://github.com/freemint/libcmini/archive/refs/heads/${LIBCMINI_BRANCH}.tar.gz
 SDL_MIXER_URL	= https://github.com/mikrosk/SDL_mixer-1.2/archive/refs/heads/${SDL_MIXER_BRANCH}.tar.gz
 ASAP_URL		= https://sourceforge.net/projects/asap/files/asap/${ASAP_VERSION}/asap-${ASAP_VERSION}.tar.gz/download
+MPG123_URL		= https://sourceforge.net/projects/mpg123/files/mpg123/${MPG123_VERSION}/mpg123-${MPG123_VERSION}.tar.bz2/download
 
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz
+download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL)
@@ -71,8 +73,11 @@ sdl_mixer.tar.gz:
 asap.tar.gz:
 	wget -q -O $@ $(ASAP_URL)
 
+mpg123.tar.bz2:
+	wget -q -O $@ $(MPG123_URL)
+
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok sdl_mixer.ok asap.ok
+build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -207,14 +212,29 @@ asap.ok:
 	rm -rf asap-${ASAP_VERSION}
 	tar xzf asap.tar.gz
 	cd asap-${ASAP_VERSION} \
-		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68000' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib bindir=${SYS_ROOT}/usr/bin \
-		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68000' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib bindir=${SYS_ROOT}/usr/bin install \
+		&& make CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68000' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib bindir=${SYS_ROOT}/usr/bin \
+		&& make CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68000' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib bindir=${SYS_ROOT}/usr/bin install \
 		&& rm asap.o libasap.a asapconv \
-		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68020-60' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m68020-60 bindir=${SYS_ROOT}/usr/bin/m68020-60 \
-		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68020-60' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m68020-60 bindir=${SYS_ROOT}/usr/bin/m68020-60 install \
+		&& make CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68020-60' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m68020-60 bindir=${SYS_ROOT}/usr/bin/m68020-60 \
+		&& make CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -m68020-60' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m68020-60 bindir=${SYS_ROOT}/usr/bin/m68020-60 install \
 		&& rm asap.o libasap.a asapconv \
-		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m5475 bindir=${SYS_ROOT}/usr/bin/m5475 \
-		&& make V=1 CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m5475 bindir=${SYS_ROOT}/usr/bin/m5475 install
+		&& make CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m5475 bindir=${SYS_ROOT}/usr/bin/m5475 \
+		&& make CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' prefix=${SYS_ROOT}/usr libdir=${SYS_ROOT}/usr/lib/m5475 bindir=${SYS_ROOT}/usr/bin/m5475 install
+	touch $@
+
+mpg123.ok:
+	rm -rf mpg123-${MPG123_VERSION}
+	tar xjf mpg123.tar.bz2
+	cd mpg123-${MPG123_VERSION} \
+		&& CFLAGS='-O2 -fomit-frame-pointer -m68000' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --with-cpu=generic_nofpu \
+			--disable-components --enable-libmpg123 --enable-network=no --disable-gapless --disable-feeder --disable-new-huffman --disable-messages --disable-equalizer --disable-32bit --disable-real --disable-feature_report --disable-largefile --with-seektable=0 \
+		&& make && make install && make distclean \
+		&& CFLAGS='-O2 -fomit-frame-pointer -m68020-60' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m68020-60 --with-cpu=generic_fpu \
+			--disable-components --enable-libmpg123 --enable-network=no --disable-gapless --disable-feeder --disable-new-huffman --disable-messages --disable-equalizer --disable-32bit --disable-real --disable-feature_report --disable-largefile --with-seektable=0 \
+		&& make && make install && make distclean \
+		&& CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --with-cpu=generic_fpu \
+			--disable-components --enable-libmpg123 --enable-network=no --disable-gapless --disable-feeder --disable-new-huffman --disable-messages --disable-equalizer --disable-32bit --disable-real --disable-feature_report --disable-largefile --with-seektable=0 \
+		&& make && make install
 	touch $@
 
 .PHONY: clean
