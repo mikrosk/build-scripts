@@ -20,7 +20,8 @@ MPG123_VERSION	= 1.33.4
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/${GEMLIB_BRANCH}.tar.gz
 SDL_URL			= https://github.com/libsdl-org/SDL-1.2/archive/refs/heads/${SDL_BRANCH}.tar.gz
-LIBXMP_URL		= https://github.com/libxmp/libxmp/releases/download/libxmp-${LIBXMP_VERSION}/libxmp-lite-${LIBXMP_VERSION}.tar.gz
+LIBXMP_URL		= https://github.com/libxmp/libxmp/releases/download/libxmp-${LIBXMP_VERSION}/libxmp-${LIBXMP_VERSION}.tar.gz
+LIBXMP_LITE_URL	= https://github.com/libxmp/libxmp/releases/download/libxmp-${LIBXMP_VERSION}/libxmp-lite-${LIBXMP_VERSION}.tar.gz
 LDG_URL			= https://svn.code.sf.net/p/ldg/code/${LDG_BRANCH}/ldg
 PHYSFS_URL		= https://github.com/pmandin/physfs/archive/refs/heads/${PHYSFS_BRANCH}.tar.gz
 CFLIB_URL		= https://github.com/freemint/cflib/archive/refs/heads/${CFLIB_BRANCH}.tar.gz
@@ -35,7 +36,7 @@ MPG123_URL		= https://sourceforge.net/projects/mpg123/files/mpg123/${MPG123_VERS
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2
+download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL)
@@ -48,6 +49,9 @@ sdl.tar.gz:
 
 libxmp.tar.gz:
 	wget -q -O $@ $(LIBXMP_URL)
+
+libxmp-lite.tar.gz:
+	wget -q -O $@ $(LIBXMP_LITE_URL)
 
 physfs.tar.gz:
 	wget -q -O $@ $(PHYSFS_URL)
@@ -77,7 +81,7 @@ mpg123.tar.bz2:
 	wget -q -O $@ $(MPG123_URL)
 
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok
+build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok libxmp-lite.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -119,9 +123,21 @@ sdl.ok:
 		&& CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=${TOOL_PREFIX} --disable-video-opengl --disable-threads --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 && make && make install
 	touch $@
 
-libxmp.ok: libxmp-lite.patch
-	rm -rf libxmp-lite-${LIBXMP_VERSION}
+libxmp.ok: libxmp.patch
+	rm -rf libxmp-${LIBXMP_VERSION}
 	tar xzf libxmp.tar.gz
+	cd libxmp-${LIBXMP_VERSION} \
+		&& cat ../libxmp..patch | patch -p1 \
+		&& CFLAGS='-O2 -fomit-frame-pointer -m68000' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --bindir=${SYS_ROOT}/usr/bin && make && make install \
+		&& make distclean \
+		&& CFLAGS='-O2 -fomit-frame-pointer -m68020-60' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m68020-60 --bindir=${SYS_ROOT}/usr/bin/m68020-60 && make && make install \
+		&& make distclean \
+		&& CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 && make && make install
+	touch $@
+
+libxmp-lite.ok: libxmp-lite.patch
+	rm -rf libxmp-lite-${LIBXMP_VERSION}
+	tar xzf libxmp-lite.tar.gz
 	cd libxmp-lite-${LIBXMP_VERSION} \
 		&& cat ../libxmp-lite.patch | patch -p1 \
 		&& CFLAGS='-O2 -fomit-frame-pointer -m68000' ./configure --host=${TOOL_PREFIX} --disable-it --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --bindir=${SYS_ROOT}/usr/bin && make && make install \
@@ -241,5 +257,5 @@ mpg123.ok:
 clean:
 	rm -f *.ok *.tar.gz
 	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} \
-		libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} usound.h libcmini-${LIBCMINI_BRANCH} \
+		libxmp-${LIBXMP_VERSION} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} usound.h libcmini-${LIBCMINI_BRANCH} \
 		SDL_mixer-1.2-${SDL_MIXER_BRANCH}
