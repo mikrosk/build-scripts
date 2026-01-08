@@ -16,6 +16,7 @@ LIBCMINI_BRANCH	= master
 SDL_MIXER_BRANCH= SDL-1.2
 ASAP_VERSION	= 7.0.0
 MPG123_VERSION	= 1.33.4
+UTHREAD_BRANCH	= main
 
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/${GEMLIB_BRANCH}.tar.gz
@@ -32,11 +33,12 @@ LIBCMINI_URL	= https://github.com/freemint/libcmini/archive/refs/heads/${LIBCMIN
 SDL_MIXER_URL	= https://github.com/mikrosk/SDL_mixer-1.2/archive/refs/heads/${SDL_MIXER_BRANCH}.tar.gz
 ASAP_URL		= https://sourceforge.net/projects/asap/files/asap/${ASAP_VERSION}/asap-${ASAP_VERSION}.tar.gz/download
 MPG123_URL		= https://sourceforge.net/projects/mpg123/files/mpg123/${MPG123_VERSION}/mpg123-${MPG123_VERSION}.tar.bz2/download
+UTHREAD_URL		= https://github.com/mikrosk/uthread/archive/refs/heads/${UTHREAD_BRANCH}.tar.gz
 
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2
+download: zlib.tar.gz gemlib.tar.gz sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz usound.h libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2 uthread.tar.gz
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL)
@@ -80,8 +82,11 @@ asap.tar.gz:
 mpg123.tar.bz2:
 	wget -q -O $@ $(MPG123_URL)
 
+uthread.tar.gz:
+	wget -q -O $@ $(UTHREAD_URL)
+
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok libxmp-lite.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok
+build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok libxmp-lite.ok physfs.ok cflib.ok libpng.ok sdl_image.ok usound.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok uthread.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -253,9 +258,16 @@ mpg123.ok:
 		&& make && make install
 	touch $@
 
+uthread.ok:
+	rm -rf uthread-${UTHREAD_BRANCH}
+	tar xzf uthread.tar.gz
+	cd uthread-${UTHREAD_BRANCH} \
+		&& make release
+	touch $@
+
 .PHONY: clean
 clean:
 	rm -f *.ok *.tar.gz
 	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} \
 		libxmp-${LIBXMP_VERSION} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} usound.h libcmini-${LIBCMINI_BRANCH} \
-		SDL_mixer-1.2-${SDL_MIXER_BRANCH}
+		SDL_mixer-1.2-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION} uthread-${UTHREAD_BRANCH}
