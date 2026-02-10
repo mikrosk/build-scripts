@@ -267,7 +267,7 @@ uthread.ok:
 
 .PHONY: clean
 clean:
-	rm -f *.ok *.tar.gz
+	rm -f *.ok *.tar.gz *.tar.bz2
 	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} \
 		libxmp-${LIBXMP_VERSION} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} usound.h libcmini-${LIBCMINI_BRANCH} \
 		SDL_mixer-1.2-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION} uthread-${UTHREAD_BRANCH}
