@@ -2,7 +2,7 @@ TOOL_PREFIX		:= m68k-atari-mintelf
 #TOOL_PREFIX		:= m68k-atari-mint
 SYS_ROOT		:= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
 
-ZLIB_VERSION	= 1.3.1
+ZLIB_VERSION	= 1.3.2
 GEMLIB_BRANCH	= master
 SDL_BRANCH		= main
 LIBXMP_VERSION	= 4.6.3
@@ -91,6 +91,7 @@ build: zlib.ok gemlib.ok ldg.ok sdl.ok libxmp.ok libxmp-lite.ok physfs.ok cflib.
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
 	tar xzf zlib.tar.gz
+	sed -i -e 's/CFLAGS="$${CFLAGS--O3} -fPIC"/CFLAGS="$${CFLAGS--O3}"/g;' zlib-${ZLIB_VERSION}/configure
 	cd zlib-${ZLIB_VERSION} \
 		&& CFLAGS='-O2 -fomit-frame-pointer -m68000' CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar RANLIB=${TOOL_PREFIX}-ranlib ./configure --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib && make && make install \
 		&& make distclean \
