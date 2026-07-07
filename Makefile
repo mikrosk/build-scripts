@@ -5,17 +5,17 @@ SYS_ROOT		:= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
 ZLIB_VERSION	= 1.3.2
 GEMLIB_BRANCH	= master
 SDL_BRANCH		= main
-LIBXMP_VERSION	= 4.6.3
+LIBXMP_VERSION	= 4.7.1
 LDG_BRANCH		= trunk
 PHYSFS_BRANCH	= m68k-atari-mint
 CFLIB_BRANCH	= master
-LIBPNG_VERSION	= 1.6.53
+LIBPNG_VERSION	= 1.6.58
 SDL_IMAGE_BRANCH= SDL-1.2
 USOUND_BRANCH	= main
 LIBCMINI_BRANCH	= master
 SDL_MIXER_BRANCH= SDL-1.2
-ASAP_VERSION	= 7.0.0
-MPG123_VERSION	= 1.33.4
+ASAP_VERSION	= 8.0.0
+MPG123_VERSION	= 1.33.6
 
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/${GEMLIB_BRANCH}.tar.gz
@@ -132,7 +132,7 @@ libxmp.ok: libxmp.patch
 	rm -rf libxmp-${LIBXMP_VERSION}
 	tar xzf libxmp.tar.gz
 	cd libxmp-${LIBXMP_VERSION} \
-		&& cat ../libxmp..patch | patch -p1 \
+		&& cat ../libxmp.patch | patch -p1 \
 		&& CFLAGS='-O2 -fomit-frame-pointer -m68000' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --bindir=${SYS_ROOT}/usr/bin && make && make install \
 		&& make distclean \
 		&& CFLAGS='-O2 -fomit-frame-pointer -m68020-60' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m68020-60 --bindir=${SYS_ROOT}/usr/bin/m68020-60 && make && make install \
