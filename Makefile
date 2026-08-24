@@ -1,11 +1,11 @@
-TOOL_PREFIX		:= m68k-atari-mintelf
-#TOOL_PREFIX		:= m68k-atari-mint
+#TOOL_PREFIX		:= m68k-atari-mintelf
+TOOL_PREFIX		:= m68k-atari-mint
 SYS_ROOT		:= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
 
 ZLIB_VERSION	= 1.3.2
 GEMLIB_BRANCH	= master
 SDL_BRANCH		= main
-LIBXMP_VERSION	= 4.7.1
+LIBXMP_VERSION	= 4.7.2
 LDG_BRANCH		= trunk
 PHYSFS_BRANCH	= m68k-atari-mint
 CFLIB_BRANCH	= master
@@ -15,7 +15,7 @@ USOUND_BRANCH	= main
 LIBCMINI_BRANCH	= master
 SDL_MIXER_BRANCH= SDL-1.2
 ASAP_VERSION	= 8.0.0
-MPG123_VERSION	= 1.33.6
+MPG123_VERSION	= 1.33.7
 
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/${GEMLIB_BRANCH}.tar.gz
