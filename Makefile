@@ -29,7 +29,7 @@ LIBPNG_URL		= https://download.sourceforge.net/libpng/libpng-${LIBPNG_VERSION}.t
 SDL_IMAGE_URL	= https://github.com/libsdl-org/SDL_image/archive/refs/heads/${SDL_IMAGE_BRANCH}.tar.gz
 USOUND_URL		= https://raw.githubusercontent.com/mikrosk/usound/${USOUND_BRANCH}/usound.h
 LIBCMINI_URL	= https://github.com/freemint/libcmini/archive/refs/heads/${LIBCMINI_BRANCH}.tar.gz
-SDL_MIXER_URL	= https://github.com/mikrosk/SDL_mixer-1.2/archive/refs/heads/${SDL_MIXER_BRANCH}.tar.gz
+SDL_MIXER_URL	= https://github.com/libsdl-org/SDL_mixer/archive/refs/heads/${SDL_MIXER_BRANCH}.tar.gz
 ASAP_URL		= https://sourceforge.net/projects/asap/files/asap/${ASAP_VERSION}/asap-${ASAP_VERSION}.tar.gz/download
 MPG123_URL		= https://sourceforge.net/projects/mpg123/files/mpg123/${MPG123_VERSION}/mpg123-${MPG123_VERSION}.tar.bz2/download
 
@@ -212,9 +212,9 @@ endif
 	touch $@
 
 sdl_mixer.ok:
-	rm -rf SDL_mixer-1.2-${SDL_MIXER_BRANCH}
+	rm -rf SDL_mixer-${SDL_MIXER_BRANCH}
 	tar xzf sdl_mixer.tar.gz
-	cd SDL_mixer-1.2-${SDL_MIXER_BRANCH} \
+	cd SDL_mixer-${SDL_MIXER_BRANCH} \
 		&& PKG_CONFIG_LIBDIR=${SYS_ROOT}/usr/lib/pkgconfig CFLAGS='-O2 -fomit-frame-pointer -m68000' LDFLAGS='-m68000' ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --bindir=${SYS_ROOT}/usr/bin \
 			--disable-music-mod --disable-music-timidity-midi --disable-music-fluidsynth-midi --disable-music-ogg --disable-music-flac --disable-music-mp3 && make && make install \
 		&& make distclean \
@@ -259,4 +259,4 @@ clean:
 	rm -f *.ok *.tar.gz *.tar.bz2
 	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} usound.h SDL-1.2-${SDL_BRANCH} \
 		libxmp-${LIBXMP_VERSION} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} libcmini-${LIBCMINI_BRANCH} \
-		SDL_mixer-1.2-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION}
+		SDL_mixer-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION}
