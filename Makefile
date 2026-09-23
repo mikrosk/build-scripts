@@ -16,6 +16,7 @@ LIBCMINI_BRANCH	= master
 SDL_MIXER_BRANCH= SDL-1.2
 ASAP_VERSION	= 8.0.0
 MPG123_VERSION	= 1.33.7
+OSMESA_VERSION	= 7.7.1
 
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/${GEMLIB_BRANCH}.tar.gz
@@ -32,11 +33,12 @@ LIBCMINI_URL	= https://github.com/freemint/libcmini/archive/refs/heads/${LIBCMIN
 SDL_MIXER_URL	= https://github.com/libsdl-org/SDL_mixer/archive/refs/heads/${SDL_MIXER_BRANCH}.tar.gz
 ASAP_URL		= https://sourceforge.net/projects/asap/files/asap/${ASAP_VERSION}/asap-${ASAP_VERSION}.tar.gz/download
 MPG123_URL		= https://sourceforge.net/projects/mpg123/files/mpg123/${MPG123_VERSION}/mpg123-${MPG123_VERSION}.tar.bz2/download
+OSMESA_URL		= https://archive.mesa3d.org/older-versions/7.x/${OSMESA_VERSION}/MesaLib-${OSMESA_VERSION}.tar.bz2
 
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz usound.h sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2
+download: zlib.tar.gz gemlib.tar.gz usound.h osmesa.tar.bz2 sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL)
@@ -46,6 +48,9 @@ gemlib.tar.gz:
 
 usound.h:
 	wget -q -O $@ $(USOUND_URL)
+
+osmesa.tar.bz2:
+	wget -q -O $@ $(OSMESA_URL)
 
 sdl.tar.gz:
 	wget -q -O $@ $(SDL_URL)
@@ -81,7 +86,7 @@ mpg123.tar.bz2:
 	wget -q -O $@ $(MPG123_URL)
 
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok usound.ok sdl.ok libxmp.ok libxmp-lite.ok physfs.ok cflib.ok libpng.ok sdl_image.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok
+build: zlib.ok gemlib.ok ldg.ok usound.ok osmesa.ok sdl.ok libxmp.ok libxmp-lite.ok physfs.ok cflib.ok libpng.ok sdl_image.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -117,15 +122,30 @@ usound.ok:
 	install -C -m 644 usound.h ${SYS_ROOT}/usr/include
 	touch $@
 
+osmesa.ok: osmesa.patch
+	rm -rf Mesa-${OSMESA_VERSION}
+	tar xjf osmesa.tar.bz2
+	cd Mesa-${OSMESA_VERSION} \
+		&& cat ../osmesa.patch | patch -p1 \
+		&& CC=${TOOL_PREFIX}-gcc CFLAGS='-O2 -fomit-frame-pointer -m68000' ./configure --host=m68k-atari-mint --enable-static --disable-shared --with-driver=osmesa --disable-egl --disable-glu --disable-glw --disable-gallium --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib && make && make install \
+		&& ${TOOL_PREFIX}-ranlib ${SYS_ROOT}/usr/lib/libOSMesa.a \
+		&& make distclean \
+		&& CC=${TOOL_PREFIX}-gcc CFLAGS='-O2 -fomit-frame-pointer -m68020-60' ./configure --host=m68k-atari-mint --enable-static --disable-shared --with-driver=osmesa --disable-egl --disable-glu --disable-glw --disable-gallium --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m68020-60 && make && make install \
+		&& ${TOOL_PREFIX}-ranlib ${SYS_ROOT}/usr/lib/m68020-60/libOSMesa.a \
+		&& make distclean \
+		&& CC=${TOOL_PREFIX}-gcc CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=m68k-atari-mint --enable-static --disable-shared --with-driver=osmesa --disable-egl --disable-glu --disable-glw --disable-gallium --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 && make && make install \
+		&& ${TOOL_PREFIX}-ranlib ${SYS_ROOT}/usr/lib/m5475/libOSMesa.a
+	touch $@
+
 sdl.ok:
 	rm -rf SDL-1.2-${SDL_BRANCH}
 	tar xzf sdl.tar.gz
 	cd SDL-1.2-${SDL_BRANCH} \
-		&& CFLAGS='-O2 -fomit-frame-pointer -m68000' ./configure --host=${TOOL_PREFIX} --disable-video-opengl --disable-threads --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --bindir=${SYS_ROOT}/usr/bin && make && make install \
+		&& CFLAGS='-O2 -fomit-frame-pointer -m68000' ./configure --host=${TOOL_PREFIX} --disable-threads --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib --bindir=${SYS_ROOT}/usr/bin && make && make install \
 		&& make distclean \
-		&& CFLAGS='-O2 -fomit-frame-pointer -m68020-60' ./configure --host=${TOOL_PREFIX} --disable-video-opengl --disable-threads --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m68020-60 --bindir=${SYS_ROOT}/usr/bin/m68020-60 && make && make install \
+		&& CFLAGS='-O2 -fomit-frame-pointer -m68020-60' ./configure --host=${TOOL_PREFIX} --disable-threads --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m68020-60 --bindir=${SYS_ROOT}/usr/bin/m68020-60 && make && make install \
 		&& make distclean \
-		&& CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=${TOOL_PREFIX} --disable-video-opengl --disable-threads --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 && make && make install
+		&& CFLAGS='-O2 -fomit-frame-pointer -mcpu=5475' ./configure --host=${TOOL_PREFIX} --disable-threads --prefix=${SYS_ROOT}/usr --libdir=${SYS_ROOT}/usr/lib/m5475 --bindir=${SYS_ROOT}/usr/bin/m5475 && make && make install
 	touch $@
 
 libxmp.ok: libxmp.patch
@@ -259,4 +279,4 @@ clean:
 	rm -f *.ok *.tar.gz *.tar.bz2
 	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} usound.h SDL-1.2-${SDL_BRANCH} \
 		libxmp-${LIBXMP_VERSION} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} libcmini-${LIBCMINI_BRANCH} \
-		SDL_mixer-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION}
+		SDL_mixer-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION} Mesa-${OSMESA_VERSION}
