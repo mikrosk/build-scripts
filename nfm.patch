@@ -1,0 +1,592 @@
+From 6fbcd250719d4d5e81de563d9e89c38f636dda5f Mon Sep 17 00:00:00 2001
+From: Miro Kropacek <miro.kropacek@gmail.com>
+Date: Sun, 4 Oct 2026 23:42:17 +1000
+Subject: [PATCH] Support building with -mfastcall
+
+---
+ CMakeLists.txt                         |  8 ++++++++
+ cmake.inc/platform.cmake               | 17 +++++++++++++++++
+ deps/natfeats/natfeats.h               | 11 +++++++++--
+ nfm/driver/common/m68k/opl_cart.s      |  4 ++++
+ nfm/driver/common/m68k/opl_lpt.s       |  4 ++++
+ nfm/driver/common/m68k/opl_lpt_spi.s   |  4 ++++
+ nfm/driver/common/m68k/opll_cart.s     |  2 ++
+ nfm/driver/opl3express/atari/usb_api.h |  7 ++++++-
+ nfmplay/src/atari/tia_handler_m68k.s   | 12 ++++++------
+ plugins/common/tia_handler_m68k.s      | 12 ++++++------
+ plugins/jam/jam.c                      |  8 ++++----
+ plugins/jam/jam_null.c                 |  8 ++++----
+ plugins/mxp/mxp.c                      | 26 +++++++++++++-------------
+ plugins/mxp/mxp.h                      |  2 +-
+ plugins/mxp/mxp_null.c                 | 26 +++++++++++++-------------
+ syscore/include/sc_platform.h          |  5 +++++
+ syscore/platform/atari/m68k/os.s       |  2 ++
+ 17 files changed, 108 insertions(+), 50 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index d08f2b17..597db3f4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -40,6 +40,14 @@ elseif(M68K_CPU MATCHES "68060")
+     set(nfmLibCpuFolder "m68060")
+ endif()
+ 
++if(M68K_FASTCALL)
++    if(nfmLibCpuFolder STREQUAL "")
++        set(nfmLibCpuFolder "mfastcall")
++    else()
++        set(nfmLibCpuFolder "${nfmLibCpuFolder}/mfastcall")
++    endif()
++endif()
++
+ endif()    
+ 
+ set(ProfilingLinkLibs)
+diff --git a/cmake.inc/platform.cmake b/cmake.inc/platform.cmake
+index 4ae17c02..3d91593d 100644
+--- a/cmake.inc/platform.cmake
++++ b/cmake.inc/platform.cmake
+@@ -220,6 +220,18 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "AtariTOS") # Atari TOS
+     set(CMAKE_C_FLAGS_RELEASE "-D_FORTIFY_SOURCE=3 -O2")
+     set(CMAKE_C_FLAGS_FINAL "-DNDEBUG -D_FORTIFY_SOURCE=3 -O2 -s")
+ 
++    option(M68K_FASTCALL "Pass function arguments in registers (-mfastcall)" OFF)
++
++    if(M68K_FASTCALL)
++        if(${TOS_CRT} STREQUAL "nolibc" OR ${TOS_CRT} STREQUAL "nolibc-nocrt0")
++            message(FATAL_ERROR "M68K_FASTCALL is not supported with TOS_CRT=${TOS_CRT}")
++        endif()
++
++        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfastcall")
++        # tells the assembler sources where the arguments are
++        add_compile_definitions(M68K_FASTCALL=1)
++    endif()
++
+     if(DEFINED ASAN_CFLAGS)
+         set(CMAKE_STATIC_LINKER_FLAGS ${CMAKE_STATIC_LINKER_FLAGS} ${ASAN_CFLAGS})
+     else()
+@@ -315,6 +327,11 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "AtariTOS") # Atari TOS
+         endif()
+     endif()
+ 
++    if(M68K_FASTCALL AND ${TOS_CRT} STREQUAL "cmini")
++        set(LibCMiniLibDir ${LibCMiniLibDir}/mfastcall)
++        set(LibCMiniStartup ${LibCMiniLibDir}/crt0.o)
++    endif()
++
+     if(${TOS_CRT} STREQUAL "stdlib")
+         #message("Using standard startup/libc")
+         add_compile_definitions(SC_USE_LIBC=1 IO_USE_POSIX=1 IO_USE_GEMDOS=0)
+diff --git a/deps/natfeats/natfeats.h b/deps/natfeats/natfeats.h
+index e5e6751c..10f3e58c 100644
+--- a/deps/natfeats/natfeats.h
++++ b/deps/natfeats/natfeats.h
+@@ -11,9 +11,16 @@
+ #ifndef _NATFEAT_H
+ #define _NATFEAT_H
+ 
++/* NatFeats opcodes expect their arguments on the stack */
++#ifdef __FASTCALL__
++#define NF_CDECL __attribute__((cdecl))
++#else
++#define NF_CDECL
++#endif
++
+ /* nf_asm.s ASM helper interface for natfeats.c */
+-long nf_id(const char *);
+-long nf_call(long ID, ...);
++long NF_CDECL nf_id(const char *);
++long NF_CDECL nf_call(long ID, ...);
+ /* call only from Supervisor mode */
+ int detect_nf(void);
+ 
+diff --git a/nfm/driver/common/m68k/opl_cart.s b/nfm/driver/common/m68k/opl_cart.s
+index d37cf05c..7f3db986 100644
+--- a/nfm/driver/common/m68k/opl_cart.s
++++ b/nfm/driver/common/m68k/opl_cart.s
+@@ -40,7 +40,9 @@ _Opl3CartReset:
+ 
+ Opl3CartWrite:
+ _Opl3CartWrite:
++	ifnd M68K_FASTCALL
+ 	move.l  4(sp),a0                        ; d0/a0 should be saved by caller
++	endif
+ 	movem.l d2-4/a2,-(sp)                   ; save scratch registers
+ 
+ 	move.b 	port(a0),d2           			; opl3 register array 0/1
+@@ -91,7 +93,9 @@ _Opl2CartReset:
+ 
+ Opl2CartWrite:
+ _Opl2CartWrite:
++	ifnd M68K_FASTCALL
+ 	move.l  4(sp),a0                        ; d0/a0 should be saved by caller
++	endif
+ 	
+ 	movem.l d2-3/a2,-(sp)                   ; save scratch registers
+ 
+diff --git a/nfm/driver/common/m68k/opl_lpt.s b/nfm/driver/common/m68k/opl_lpt.s
+index 48b68db6..3e90cc77 100644
+--- a/nfm/driver/common/m68k/opl_lpt.s
++++ b/nfm/driver/common/m68k/opl_lpt.s
+@@ -62,7 +62,9 @@ _OplxLptDeinit:
+ Opl2Write:
+ _Opl2Write:
+ 	movem.l d0-7/a0-6,-(sp)
++	ifnd M68K_FASTCALL
+ 	move.l  64(sp),a0
++	endif
+ 
+ 	move.b 	reg(a0),d0           	; opl2 register address
+ 	move.b 	val(a0),d1 				; opl2 value to write under previously set address
+@@ -122,7 +124,9 @@ _Opl2Write:
+ Opl3Write:
+ _Opl3Write:
+ 	movem.l d0-7/a0-6,-(sp)
++	ifnd M68K_FASTCALL
+ 	move.l  64(sp),a0
++	endif
+ 	
+ 	move.b 	port(a0),d2           	; opl3 register array 0/1
+ 	move.b 	reg(a0),d0           	; opl2 register address
+diff --git a/nfm/driver/common/m68k/opl_lpt_spi.s b/nfm/driver/common/m68k/opl_lpt_spi.s
+index 79d38c4d..593b1cff 100644
+--- a/nfm/driver/common/m68k/opl_lpt_spi.s
++++ b/nfm/driver/common/m68k/opl_lpt_spi.s
+@@ -152,7 +152,9 @@ _Opl3DuoReset:
+ 
+ Opl3DuoWrite:
+ _Opl3DuoWrite:
++	ifnd M68K_FASTCALL
+ 	move.l  4(sp),a0
++	endif
+ 	move.b 	port(a0),d2           		; opl3 register array 0/1
+ 	move.b 	reg(a0),d0           		; opl2 register address
+ 	move.b 	val(a0),d1 					; opl2 value to write under previously set address
+@@ -326,7 +328,9 @@ _SpiOpl2AudioWrite:
+ 
+ Opl2AudioWrite:
+ _Opl2AudioWrite:
++	ifnd M68K_FASTCALL
+ 	move.l  4(sp),a0
++	endif
+ 	move.b 	reg(a0),d0           		; opl2 register address
+ 	move.b 	val(a0),d1 					; opl2 value to write under previously set address
+ 	move.b  d0,d5
+diff --git a/nfm/driver/common/m68k/opll_cart.s b/nfm/driver/common/m68k/opll_cart.s
+index 86135141..e5e5ec69 100644
+--- a/nfm/driver/common/m68k/opll_cart.s
++++ b/nfm/driver/common/m68k/opll_cart.s
+@@ -29,7 +29,9 @@ OPL_MODE_BIT			equ		9
+ 
+ OpllWrite:
+ _OpllWrite:
++	ifnd M68K_FASTCALL
+ 	move.l  4(sp),a0
++	endif
+ 	move.b 	reg(a0),d0           			; opll register address
+ 	move.b 	val(a0),d1 						; opll value to write under previously set address
+ 	
+diff --git a/nfm/driver/opl3express/atari/usb_api.h b/nfm/driver/opl3express/atari/usb_api.h
+index f2b69ce9..160dc286 100644
+--- a/nfm/driver/opl3express/atari/usb_api.h
++++ b/nfm/driver/opl3express/atari/usb_api.h
+@@ -780,7 +780,12 @@ struct uddif
+ 	long		resrvd2;	/* (*timeout) */
+ };
+ 
+-#define _cdecl 
++/* the USB stack is built with arguments passed on the stack */
++#ifdef __FASTCALL__
++#define _cdecl __attribute__((cdecl))
++#else
++#define _cdecl
++#endif
+ 
+ struct usb_module_api
+ {
+diff --git a/nfmplay/src/atari/tia_handler_m68k.s b/nfmplay/src/atari/tia_handler_m68k.s
+index 82bfc0f3..457077da 100644
+--- a/nfmplay/src/atari/tia_handler_m68k.s
++++ b/nfmplay/src/atari/tia_handler_m68k.s
+@@ -17,14 +17,14 @@ timerAVec:
+     addq.l  #1,gTimerATicks                    ; increase tick counter
+     bset    #0,gTimerALock                     ; lock interrupt
+     bne.s   .skipTimerA                         ; skip interrupt if already locked
+-    movem.l d0-d1/a0-a1,-(sp)                   ; save gcc regs
+-    move.w  16(sp),d0                           ; get old sr
++    movem.l d0-d2/a0-a1,-(sp)                   ; save gcc regs (d2: -mfastcall)
++    move.w  20(sp),d0                           ; get old sr
+     or.w    #$2000,d0                           ; keep supervisor status
+     move.l  gTimerACallback,a0                 ; get timer functions
+     move.b  #$df,$fffffa0f.w                    ; clear in-service
+     move.w  d0,sr                               ; enable interrupts as they where
+     jsr     (a0)                                ; call timer function
+-    movem.l (sp)+,d0-d1/a0-a1                   ; restore gcc regs
++    movem.l (sp)+,d0-d2/a0-a1                   ; restore gcc regs
+     bclr    #0,gTimerALock                     ; unlock
+     rte
+ .skipTimerA:
+@@ -60,14 +60,14 @@ _timerAVec:
+     addq.l  #1,_gTimerATicks                    ; increase tick counter
+     bset    #0,_gTimerALock                     ; lock interrupt
+     bne.s   .skipTimerA                         ; skip interrupt if already locked
+-    movem.l d0-d1/a0-a1,-(sp)                   ; save gcc regs
+-    move.w  16(sp),d0                           ; get old sr
++    movem.l d0-d2/a0-a1,-(sp)                   ; save gcc regs (d2: -mfastcall)
++    move.w  20(sp),d0                           ; get old sr
+     or.w    #$2000,d0                           ; keep supervisor status
+     move.l  _gTimerACallback,a0                 ; get timer functions
+     move.b  #$df,$fffffa0f.w                    ; clear in-service
+     move.w  d0,sr                               ; enable interrupts as they where
+     jsr     (a0)                                ; call timer function
+-    movem.l (sp)+,d0-d1/a0-a1                   ; restore gcc regs
++    movem.l (sp)+,d0-d2/a0-a1                   ; restore gcc regs
+     bclr    #0,_gTimerALock                     ; unlock
+     rte
+ .skipTimerA:
+diff --git a/plugins/common/tia_handler_m68k.s b/plugins/common/tia_handler_m68k.s
+index b03712fc..e2bd484c 100644
+--- a/plugins/common/tia_handler_m68k.s
++++ b/plugins/common/tia_handler_m68k.s
+@@ -17,14 +17,14 @@ timerAVec:
+     addq.l  #1,gTimerATicks                    ; increase tick counter
+     bset    #0,gTimerALock                     ; lock interrupt
+     bne.s   .skipTimerA                         ; skip interrupt if already locked
+-    movem.l d0-d1/a0-a1,-(sp)                   ; save gcc regs
+-    move.w  16(sp),d0                           ; get old sr
++    movem.l d0-d2/a0-a1,-(sp)                   ; save gcc regs (d2: -mfastcall)
++    move.w  20(sp),d0                           ; get old sr
+     or.w    #$2000,d0                           ; keep supervisor status
+     move.l  gTimerACallback,a0                 ; get timer functions
+     move.b  #$df,$fffffa0f.w                    ; clear in-service
+     move.w  d0,sr                               ; enable interrupts as they where
+     jsr     (a0)                                ; call timer function
+-    movem.l (sp)+,d0-d1/a0-a1                   ; restore gcc regs
++    movem.l (sp)+,d0-d2/a0-a1                   ; restore gcc regs
+     bclr    #0,gTimerALock                     ; unlock
+     rte
+ .skipTimerA:
+@@ -59,14 +59,14 @@ _timerAVec:
+     addq.l  #1,_gTimerATicks                    ; increase tick counter
+     bset    #0,_gTimerALock                     ; lock interrupt
+     bne.s   .skipTimerA                         ; skip interrupt if already locked
+-    movem.l d0-d1/a0-a1,-(sp)                   ; save gcc regs
+-    move.w  16(sp),d0                           ; get old sr
++    movem.l d0-d2/a0-a1,-(sp)                   ; save gcc regs (d2: -mfastcall)
++    move.w  20(sp),d0                           ; get old sr
+     or.w    #$2000,d0                           ; keep supervisor status
+     move.l  _gTimerACallback,a0                 ; get timer functions
+     move.b  #$df,$fffffa0f.w                    ; clear in-service
+     move.w  d0,sr                               ; enable interrupts as they where
+     jsr     (a0)                                ; call timer function
+-    movem.l (sp)+,d0-d1/a0-a1                   ; restore gcc regs
++    movem.l (sp)+,d0-d2/a0-a1                   ; restore gcc regs
+     bclr    #0,_gTimerALock                     ; unlock
+     rte
+ .skipTimerA:
+diff --git a/plugins/jam/jam.c b/plugins/jam/jam.c
+index 3f376889..9eb98554 100644
+--- a/plugins/jam/jam.c
++++ b/plugins/jam/jam.c
+@@ -18,9 +18,9 @@ extern uint32_t jamHookNextSong;
+ static uint8_t* gSongData = 0;
+ static sJamSongInfo* gSongInfo = 0;
+ 
+-extern void jamCallHookNextSong(void);
+-extern void jamCallHookLog(char* msg);
+-extern void jamCallHookAlert(char* msg);
++extern void SC_CDECL jamCallHookNextSong(void);
++extern void SC_CDECL jamCallHookLog(char* msg);
++extern void SC_CDECL jamCallHookAlert(char* msg);
+ 
+ // dummy, 
+ void songPause(bool paused)
+@@ -113,7 +113,7 @@ void jamLog(eJamLogType type, const char* msg, ...)
+ // Message handler
+ //
+ //-------------------------------------------------------------
+-uint32_t jamMessageHandler(int32_t param, eJamMsg msg, void* data2, void* data1)
++uint32_t SC_CDECL jamMessageHandler(int32_t param, eJamMsg msg, void* data2, void* data1)
+ {
+     switch (msg)
+     {
+diff --git a/plugins/jam/jam_null.c b/plugins/jam/jam_null.c
+index 5b6bb54b..8ee9ae41 100644
+--- a/plugins/jam/jam_null.c
++++ b/plugins/jam/jam_null.c
+@@ -21,9 +21,9 @@ static uint8_t* gSongData = 0;
+ static sJamSongInfo SongInfo;
+ static sJamSongInfo* gSongInfo;
+ 
+-extern void jamCallHookNextSong(void);
+-extern void jamCallHookLog(char* msg);
+-extern void jamCallHookAlert(char* msg);
++extern void SC_CDECL jamCallHookNextSong(void);
++extern void SC_CDECL jamCallHookLog(char* msg);
++extern void SC_CDECL jamCallHookAlert(char* msg);
+ 
+ static int16_t gInterfaceInitialised = 0;
+ 
+@@ -170,7 +170,7 @@ sJamPluginInfo* jamOnPluginInfo(void)
+ // Message handler
+ //
+ //-------------------------------------------------------------
+-uint32_t jamMessageHandler(int32_t param, eJamMsg msg, void* data2, void* data1)
++uint32_t SC_CDECL jamMessageHandler(int32_t param, eJamMsg msg, void* data2, void* data1)
+ {
+     switch (msg)
+     {
+diff --git a/plugins/mxp/mxp.c b/plugins/mxp/mxp.c
+index 63a7bea0..1a60562b 100644
+--- a/plugins/mxp/mxp.c
++++ b/plugins/mxp/mxp.c
+@@ -31,19 +31,19 @@ const sMxpExtension mx_extensions[] = {
+ };
+ 
+ 
+-static int32_t paramGetChipType(void)
++static int32_t SC_CDECL paramGetChipType(void)
+ {
+     mx_plugin.inBuffer.value = (int32_t)infoChipType();
+     return MXP_OK;
+ }
+ 
+-static int32_t paramGetSongName(void)
++static int32_t SC_CDECL paramGetSongName(void)
+ {
+     mx_plugin.inBuffer.value = (int32_t)infoSongName();
+     return MXP_OK;
+ }
+ 
+-static int32_t paramGetAuthor(void)
++static int32_t SC_CDECL paramGetAuthor(void)
+ {
+     mx_plugin.inBuffer.value = (int32_t)infoAuthor();
+     return MXP_OK;
+@@ -58,12 +58,12 @@ const sMxpParameter mx_settings[] =
+ };
+ 
+ 
+-int32_t mx_init(void)
++int32_t SC_CDECL mx_init(void)
+ {
+     return pluginInit() ? MXP_OK : MXP_ERROR;
+ }
+ 
+-int32_t mx_register_module(void)
++int32_t SC_CDECL mx_register_module(void)
+ {
+     int32_t retval = MXP_ERROR;
+     uint8_t* data = (uint8_t*) mx_plugin.inBuffer.module->p;
+@@ -80,31 +80,31 @@ int32_t mx_register_module(void)
+     return retval;    
+ }
+ 
+-int32_t mx_unregister_module(void)
++int32_t SC_CDECL mx_unregister_module(void)
+ {
+     songUnload();
+     return MXP_OK;
+ }
+ 
+-int32_t mx_get_songs(void)
++int32_t SC_CDECL mx_get_songs(void)
+ {
+     mx_plugin.inBuffer.value = 1;
+     return MXP_OK;
+ }
+ 
+-int32_t mx_set(void)
++int32_t SC_CDECL mx_set(void)
+ {
+     songRestart();
+     return MXP_OK;
+ }
+ 
+-int32_t mx_unset(void)
++int32_t SC_CDECL mx_unset(void)
+ {
+     songStop();
+     return MXP_OK;
+ }
+ 
+-int32_t mx_feed(void)
++int32_t SC_CDECL mx_feed(void)
+ {
+    if (gCurrentSongPtr)
+    {
+@@ -125,7 +125,7 @@ void songPause(bool paused)
+ }
+ 
+ 
+-int32_t mx_pause(void)
++int32_t SC_CDECL mx_pause(void)
+ {
+     if (gCurrentSongPtr)
+     {
+@@ -135,12 +135,12 @@ int32_t mx_pause(void)
+     return MXP_ERROR;
+ }
+ 
+-int32_t mx_mute(void)
++int32_t SC_CDECL mx_mute(void)
+ {
+     return MXP_ERROR;
+ }
+ 
+-int32_t mx_get_playtime(void)
++int32_t SC_CDECL mx_get_playtime(void)
+ {
+     // we don't know the song length up front, so just set a very high number
+     mx_plugin.inBuffer.value = 3600000UL; //60 * 60 * 1000;
+diff --git a/plugins/mxp/mxp.h b/plugins/mxp/mxp.h
+index 47361dfb..f55dc374 100644
+--- a/plugins/mxp/mxp.h
++++ b/plugins/mxp/mxp.h
+@@ -31,7 +31,7 @@ typedef enum
+ 	MXPT_INT
+ } eMxpType;
+ 
+-typedef int32_t (*funcPtrMxp)(void);
++typedef int32_t (SC_CDECL *funcPtrMxp)(void);
+ 
+ typedef struct
+ {
+diff --git a/plugins/mxp/mxp_null.c b/plugins/mxp/mxp_null.c
+index 0597b238..8f2f12b5 100644
+--- a/plugins/mxp/mxp_null.c
++++ b/plugins/mxp/mxp_null.c
+@@ -25,19 +25,19 @@ const sMxpExtension mx_extensions[] = {
+ };
+ 
+ 
+-static int32_t paramGetChipType(void)
++static int32_t SC_CDECL paramGetChipType(void)
+ {
+     mx_plugin.inBuffer.value = 0;
+     return MXP_OK;
+ }
+ 
+-static int32_t paramGetSongName(void)
++static int32_t SC_CDECL paramGetSongName(void)
+ {
+     mx_plugin.inBuffer.value = 0;
+     return MXP_OK;
+ }
+ 
+-static int32_t paramGetAuthor(void)
++static int32_t SC_CDECL paramGetAuthor(void)
+ {
+     mx_plugin.inBuffer.value = 0;
+     return MXP_OK;
+@@ -53,7 +53,7 @@ const sMxpParameter mx_settings[] =
+ 
+ static int16_t gInterfaceInitialised = 0;
+ 
+-int32_t mx_init(void)
++int32_t SC_CDECL mx_init(void)
+ {
+     if(gInterfaceInitialised == 0)
+     {
+@@ -79,7 +79,7 @@ int32_t mx_init(void)
+     return MXP_OK;
+ }
+ 
+-int32_t mx_register_module(void)
++int32_t SC_CDECL mx_register_module(void)
+ {
+     int32_t retval = MXP_ERROR;
+     uint8_t* data = (uint8_t*) mx_plugin.inBuffer.module->p;
+@@ -94,50 +94,50 @@ int32_t mx_register_module(void)
+     return retval;    
+ }
+ 
+-int32_t mx_unregister_module(void)
++int32_t SC_CDECL mx_unregister_module(void)
+ {
+     scPrintf("mx_unregister_module()"NL, 0);
+     return MXP_OK;
+ }
+ 
+-int32_t mx_get_songs(void)
++int32_t SC_CDECL mx_get_songs(void)
+ {
+     mx_plugin.inBuffer.value = 1;
+     scPrintf("mx_get_songs()"NL, 0);
+     return MXP_OK;
+ }
+ 
+-int32_t mx_set(void)
++int32_t SC_CDECL mx_set(void)
+ {
+     scPrintf("mx_set()"NL, 0);
+     return MXP_OK;
+ }
+ 
+-int32_t mx_unset(void)
++int32_t SC_CDECL mx_unset(void)
+ {
+     scPrintf("mx_unset()"NL, 0);
+     return MXP_OK;
+ }
+ 
+-int32_t mx_feed(void)
++int32_t SC_CDECL mx_feed(void)
+ {
+     scPrintf("mx_feed()"NL, 0);
+     return MXP_OK;
+ }
+ 
+-int32_t mx_pause(void)
++int32_t SC_CDECL mx_pause(void)
+ {
+     scPrintf("mx_pause()"NL, 0);
+     return MXP_OK;
+ }
+ 
+-int32_t mx_mute(void)
++int32_t SC_CDECL mx_mute(void)
+ {
+     scPrintf("mx_mute()"NL, 0);
+     return MXP_OK;
+ }
+ 
+-int32_t mx_get_playtime(void)
++int32_t SC_CDECL mx_get_playtime(void)
+ {
+     // we don't know the song length up front, so just set a very high number
+     mx_plugin.inBuffer.value = 3600000UL; //60 * 60 * 1000;
+diff --git a/syscore/include/sc_platform.h b/syscore/include/sc_platform.h
+index 585cd12b..c154b248 100644
+--- a/syscore/include/sc_platform.h
++++ b/syscore/include/sc_platform.h
+@@ -171,7 +171,12 @@
+ 
+ #elif defined(__GNUC__) || defined (__clang__)
+ 
++#if defined(__FASTCALL__)
++// interfaces shared with code not built with -mfastcall
++#define SC_CDECL __attribute__((cdecl))
++#else
+ #define SC_CDECL 
++#endif
+ #define SC_PACK(decl) (decl) __attribute__((__packed__))
+ 
+ #define SC_ALIGN_BEGIN(alignment) 
+diff --git a/syscore/platform/atari/m68k/os.s b/syscore/platform/atari/m68k/os.s
+index 47c165a0..1392e481 100644
+--- a/syscore/platform/atari/m68k/os.s
++++ b/syscore/platform/atari/m68k/os.s
+@@ -36,7 +36,9 @@ runDelayCalibration:
+         lea     MFP_TCDCR,a0        ;a0 -> Timer C/D control reg
+         ori.b   #$02,(a0)           ;set pre-scaler = divide-by-10 & start TimerD
+ 
++	ifnd M68K_FASTCALL
+         move.l  4(a7),d0            ;loopcount
++	endif
+ cal_loop:                           
+         subq.l  #1,d0
+         bpl.s   cal_loop
+-- 
+2.55.0
+

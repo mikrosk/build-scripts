@@ -22,6 +22,7 @@ SDL_MIXER_BRANCH= SDL-1.2
 ASAP_VERSION	= 8.0.0
 MPG123_VERSION	= 1.33.7
 OSMESA_VERSION	= 7.7.1
+NFM_VERSION		= 0.4.0
 
 ZLIB_URL		= https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 GEMLIB_URL		= https://github.com/freemint/gemlib/archive/refs/heads/${GEMLIB_BRANCH}.tar.gz
@@ -39,11 +40,12 @@ SDL_MIXER_URL	= https://github.com/libsdl-org/SDL_mixer/archive/refs/heads/${SDL
 ASAP_URL		= https://sourceforge.net/projects/asap/files/asap/${ASAP_VERSION}/asap-${ASAP_VERSION}.tar.gz/download
 MPG123_URL		= https://sourceforge.net/projects/mpg123/files/mpg123/${MPG123_VERSION}/mpg123-${MPG123_VERSION}.tar.bz2/download
 OSMESA_URL		= https://archive.mesa3d.org/older-versions/7.x/${OSMESA_VERSION}/MesaLib-${OSMESA_VERSION}.tar.bz2
+NFM_URL			= https://framagit.org/nokturnal/nfm/-/archive/${NFM_VERSION}/nfm-${NFM_VERSION}.tar.gz
 
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz usound.h osmesa.tar.bz2 sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2
+download: zlib.tar.gz gemlib.tar.gz usound.h osmesa.tar.bz2 sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2 nfm.tar.gz
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL) || { rm -f $@; exit 1; }
@@ -90,8 +92,11 @@ asap.tar.gz:
 mpg123.tar.bz2:
 	wget -q -O $@ $(MPG123_URL) || { rm -f $@; exit 1; }
 
+nfm.tar.gz:
+	wget -q -O $@ $(NFM_URL) || { rm -f $@; exit 1; }
+
 .PHONY: build
-build: zlib.ok gemlib.ok ldg.ok usound.ok osmesa.ok sdl.ok libxmp.ok libxmp-lite.ok physfs.ok cflib.ok libpng.ok sdl_image.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok
+build: zlib.ok gemlib.ok ldg.ok usound.ok osmesa.ok sdl.ok libxmp.ok libxmp-lite.ok physfs.ok cflib.ok libpng.ok sdl_image.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok nfm.ok
 
 zlib.ok:
 	rm -rf zlib-${ZLIB_VERSION}
@@ -161,7 +166,7 @@ libxmp-lite.ok: libxmp-lite.patch
 	done
 	touch $@
 
-physfs.ok: freemint-${TOOL_PREFIX}.cmake
+physfs.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake
 	rm -rf physfs-${PHYSFS_BRANCH}
 	tar xzf physfs.tar.gz
 	cd physfs-${PHYSFS_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -242,9 +247,31 @@ mpg123.ok:
 	done
 	touch $@
 
+# FMST doesn't compile: OT_OPN and CO_YM2203 are undefined
+# C17 -> C11: gcc 7 has no -std=c17 and nFM uses nothing beyond C11
+nfm.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake nfm.patch
+	rm -rf nfm-${NFM_VERSION}
+	tar xzf nfm.tar.gz
+	cd nfm-${NFM_VERSION} && cat ../nfm.patch | patch -p1 \
+		&& grep -rlZ --include=CMakeLists.txt --include='*.cmake' AtariTOS . | xargs -0 sed -i 's/AtariTOS/FreeMiNT/g; s/CMAKE_C_STANDARD 17/CMAKE_C_STANDARD 11/; s/-std=c17/-std=c11/' \
+		&& for ml in $(MULTILIBS); do $(ML_SETUP) \
+		case "$$flags" in "") cpu=68000;; "-m68020-60") cpu=68020-60;; "-mfastcall") cpu=68000;; "-m68020-60 -mfastcall") cpu=68020-60;; *) continue;; esac; \
+		case "$$flags" in *-mfastcall*) fastcall=ON;; *) fastcall=OFF;; esac; \
+		rm -rf build && mkdir build && cd build \
+			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint-${TOOL_PREFIX}.cmake -DCMAKE_BUILD_TYPE=Final -DM68K_CPU=$$cpu -DM68K_FASTCALL=$$fastcall -DTOS_CRT=stdlib \
+				-DCMAKE_MODULE_PATH=$$PWD/../cmake.inc/modules -DCMAKE_ASM_VASM_COMPILER_ELF=$(if $(filter %mintelf,$(TOOL_PREFIX)),TRUE,FALSE) \
+				-DNFM_ENABLE_DRIVER_NOKTURNFM=ON -DNFM_ENABLE_DRIVER_SB=ON -DNFM_ENABLE_DRIVER_NULL=ON -DNFM_ENABLE_DRIVER_NULL_NATFEATS_EXTENSION=ON -DNFM_ENABLE_DRIVER_OPLL=ON \
+				-DNFM_ENABLE_DRIVER_RW_OPL3_EXPRESS=ON -DNFM_ENABLE_DRIVER_OPL3DUO=ON -DNFM_ENABLE_DRIVER_OPLXLPT=ON -DNFM_ENABLE_DRIVER_NUKED_OPL3=OFF -DNFM_ENABLE_DRIVER_FMST=OFF \
+				-DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_INCLUDEDIR=include/nfm .. \
+			&& make $(JOBS) nfm iofs allocators sysaudio \
+			&& cmake --install . --component libraries && cmake --install . --component headers && cmake --install . --component Unspecified \
+			&& cd .. || exit 1; \
+	done
+	touch $@
+
 .PHONY: clean
 clean:
 	rm -f *.ok *.tar.gz *.tar.bz2
 	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} usound.h SDL-1.2-${SDL_BRANCH} \
 		libxmp-${LIBXMP_VERSION} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} libcmini-${LIBCMINI_BRANCH} \
-		SDL_mixer-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION} Mesa-${OSMESA_VERSION}
+		SDL_mixer-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION} Mesa-${OSMESA_VERSION} nfm-${NFM_VERSION}
