@@ -1,4 +1,6 @@
-set(UNIX 1)
+# cmake ships no platform module for FreeMiNT: add this directory to the
+# module path so that Platform/FreeMiNT.cmake from here is loaded
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 # the name of the target operating system
 set(CMAKE_SYSTEM_NAME FreeMiNT)
