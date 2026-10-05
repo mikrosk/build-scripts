@@ -120,8 +120,8 @@ ldg.ok:
 	rm -rf ldg-${LDG_BRANCH}
 	svn export ${LDG_URL} ldg-${LDG_BRANCH}
 	cd ldg-${LDG_BRANCH}/src/devel \
-		&& make $(JOBS) -f gcc.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
-		&& make $(JOBS) -f gccm68020-60.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
+		&& make $(JOBS) -f gcc.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar && make -f gcc.mak clean \
+		&& make $(JOBS) -f gccm68020-60.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar && make -f gccm68020-60.mak clean \
 		&& make $(JOBS) -f gccm5475.mak CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar \
 		&& cp -ra ../../lib/gcc/* ${SYS_ROOT}/usr/lib && cp -ra ../../include ${SYS_ROOT}/usr
 	touch $@
