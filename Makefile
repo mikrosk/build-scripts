@@ -142,10 +142,17 @@ osmesa.ok: osmesa.patch
 sdl.ok:
 	rm -rf SDL-1.2-${SDL_BRANCH}
 	tar xzf sdl.tar.gz
+	rm -f ${SYS_ROOT}/usr/include/SDL/SDL_config-*.h
+# SDL_config.h depends on -mfastcall (LDG is disabled), so install one per calling convention
 	cd SDL-1.2-${SDL_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
+		case "$$flags" in *-mfastcall*) cfg=mfastcall;; *) cfg=default;; esac; \
 		CFLAGS="-O2 -fomit-frame-pointer $$flags" ./configure --host=${TOOL_PREFIX} --disable-threads --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
-			&& make $(JOBS) && make install && make distclean || exit 1; \
+			&& make $(JOBS) && make install \
+			&& mv ${SYS_ROOT}/usr/include/SDL/SDL_config.h ${SYS_ROOT}/usr/include/SDL/SDL_config-$$cfg.h \
+			&& make distclean || exit 1; \
 	done
+	printf '%s\n' '#ifdef __FASTCALL__' '#include "SDL_config-mfastcall.h"' '#else' '#include "SDL_config-default.h"' '#endif' \
+		> ${SYS_ROOT}/usr/include/SDL/SDL_config.h
 	touch $@
 
 libxmp.ok: libxmp.patch
