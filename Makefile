@@ -254,6 +254,7 @@ nfm.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake nfm.patch
 	tar xzf nfm.tar.gz
 	cd nfm-${NFM_VERSION} && cat ../nfm.patch | patch -p1 \
 		&& grep -rlZ --include=CMakeLists.txt --include='*.cmake' AtariTOS . | xargs -0 sed -i 's/AtariTOS/FreeMiNT/g; s/CMAKE_C_STANDARD 17/CMAKE_C_STANDARD 11/; s/-std=c17/-std=c11/' \
+		&& grep -rlZ --include=CMakeLists.txt 'cmake_minimum_required(VERSION 3\.31)' . | xargs -0 sed -i 's/cmake_minimum_required(VERSION 3\.31)/cmake_minimum_required(VERSION 3.30)/' \
 		&& for ml in $(MULTILIBS); do $(ML_SETUP) \
 		case "$$flags" in "") cpu=68000;; "-m68020-60") cpu=68020-60;; "-mfastcall") cpu=68000;; "-m68020-60 -mfastcall") cpu=68020-60;; *) continue;; esac; \
 		case "$$flags" in *-mfastcall*) fastcall=ON;; *) fastcall=OFF;; esac; \
