@@ -1,8 +1,11 @@
-TOOL_PREFIX		:= m68k-atari-mintelf
-#TOOL_PREFIX		:= m68k-atari-mint
-SYS_ROOT		:= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
+TOOLCHAINS		:= m68k-atari-mint m68k-atari-mintelf
 JOBS			:= -j$(shell nproc)
+
+# TOOL_PREFIX is set only in the per-toolchain sub-make started by 'build'
+ifdef TOOL_PREFIX
+SYS_ROOT		:= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
 MULTILIBS		:= $(shell $(TOOL_PREFIX)-gcc -print-multi-lib | grep -v mshort | tr ';' ':')
+endif
 
 # -mtune=68060 lets gcc convert float to int with fintrz instead of switching
 # the FPCR rounding mode (68040 tuning); it must follow -m68020-60, which resets it
@@ -103,10 +106,18 @@ mpg123.tar.bz2:
 nfm.tar.gz:
 	wget -q -O $@ $(NFM_URL) || { rm -f $@; exit 1; }
 
-.PHONY: build
-build: zlib.ok gemlib.ok ldg.ok usound.ok osmesa.ok sdl.ok libxmp.ok libxmp-lite.ok physfs.ok cflib.ok libpng.ok sdl_image.ok libcmini.ok sdl_mixer.ok asap.ok mpg123.ok nfm.ok
+PROJECTS		:= zlib gemlib ldg usound osmesa sdl libxmp libxmp-lite physfs cflib libpng sdl_image libcmini sdl_mixer asap mpg123 nfm
 
-zlib.ok:
+# toolchains are built one after another: all of them share the same source directories
+.PHONY: build
+ifdef TOOL_PREFIX
+build: $(PROJECTS:%=%.$(TOOL_PREFIX).ok)
+else
+build:
+	for tc in $(TOOLCHAINS); do $(MAKE) TOOL_PREFIX=$$tc build || exit 1; done
+endif
+
+zlib.${TOOL_PREFIX}.ok:
 	rm -rf zlib-${ZLIB_VERSION}
 	tar xzf zlib.tar.gz
 	sed -i -e 's/CFLAGS="$${CFLAGS--O3} -fPIC"/CFLAGS="$${CFLAGS--O3}"/g;' zlib-${ZLIB_VERSION}/configure
@@ -116,7 +127,7 @@ zlib.ok:
 	done
 	touch $@
 
-gemlib.ok:
+gemlib.${TOOL_PREFIX}.ok:
 	rm -rf gemlib-${GEMLIB_BRANCH}
 	tar xzf gemlib.tar.gz
 	cd gemlib-${GEMLIB_BRANCH} \
@@ -124,7 +135,7 @@ gemlib.ok:
 		&& make CROSS_TOOL=${TOOL_PREFIX} DESTDIR=${SYS_ROOT} PREFIX=/usr V=1 install
 	touch $@
 
-ldg.ok:
+ldg.${TOOL_PREFIX}.ok:
 	rm -rf ldg-${LDG_BRANCH}
 	svn export ${LDG_URL} ldg-${LDG_BRANCH}
 	cd ldg-${LDG_BRANCH}/src/devel \
@@ -134,11 +145,11 @@ ldg.ok:
 		&& cp -ra ../../lib/gcc/* ${SYS_ROOT}/usr/lib && cp -ra ../../include ${SYS_ROOT}/usr
 	touch $@
 
-usound.ok:
+usound.${TOOL_PREFIX}.ok:
 	install -C -m 644 usound.h ${SYS_ROOT}/usr/include
 	touch $@
 
-osmesa.ok: osmesa.patch
+osmesa.${TOOL_PREFIX}.ok: osmesa.patch
 	rm -rf Mesa-${OSMESA_VERSION}
 	tar xjf osmesa.tar.bz2
 	cd Mesa-${OSMESA_VERSION} && cat ../osmesa.patch | patch -p1 && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -147,7 +158,7 @@ osmesa.ok: osmesa.patch
 	done
 	touch $@
 
-sdl.ok:
+sdl.${TOOL_PREFIX}.ok:
 	rm -rf SDL-1.2-${SDL_BRANCH}
 	tar xzf sdl.tar.gz
 	rm -f ${SYS_ROOT}/usr/include/SDL/SDL_config-*.h
@@ -163,7 +174,7 @@ sdl.ok:
 		> ${SYS_ROOT}/usr/include/SDL/SDL_config.h
 	touch $@
 
-libxmp.ok: libxmp.patch
+libxmp.${TOOL_PREFIX}.ok: libxmp.patch
 	rm -rf libxmp-${LIBXMP_VERSION}
 	tar xzf libxmp.tar.gz
 	cd libxmp-${LIBXMP_VERSION} && cat ../libxmp.patch | patch -p1 && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -172,7 +183,7 @@ libxmp.ok: libxmp.patch
 	done
 	touch $@
 
-libxmp-lite.ok: libxmp-lite.patch
+libxmp-lite.${TOOL_PREFIX}.ok: libxmp-lite.patch
 	rm -rf libxmp-lite-${LIBXMP_VERSION}
 	tar xzf libxmp-lite.tar.gz
 	cd libxmp-lite-${LIBXMP_VERSION} && cat ../libxmp-lite.patch | patch -p1 && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -181,7 +192,7 @@ libxmp-lite.ok: libxmp-lite.patch
 	done
 	touch $@
 
-physfs.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake
+physfs.${TOOL_PREFIX}.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake
 	rm -rf physfs-${PHYSFS_BRANCH}
 	tar xzf physfs.tar.gz
 	cd physfs-${PHYSFS_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -191,7 +202,7 @@ physfs.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake
 	done
 	touch $@
 
-cflib.ok:
+cflib.${TOOL_PREFIX}.ok:
 	rm -rf cflib-${CFLIB_BRANCH}
 	tar xzf cflib.tar.gz
 	cd cflib-${CFLIB_BRANCH} \
@@ -199,7 +210,7 @@ cflib.ok:
 		&& make CROSS_TOOL=${TOOL_PREFIX} DESTDIR=${SYS_ROOT} PREFIX=/usr V=1 install
 	touch $@
 
-libpng.ok:
+libpng.${TOOL_PREFIX}.ok:
 	rm -rf libpng-${LIBPNG_VERSION}
 	tar xzf libpng.tar.gz
 	cd libpng-${LIBPNG_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -208,7 +219,7 @@ libpng.ok:
 	done
 	touch $@
 
-sdl_image.ok:
+sdl_image.${TOOL_PREFIX}.ok:
 	rm -rf SDL_image-${SDL_IMAGE_BRANCH}
 	tar xzf sdl_image.tar.gz
 	cd SDL_image-${SDL_IMAGE_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -217,7 +228,7 @@ sdl_image.ok:
 	done
 	touch $@
 
-libcmini.ok:
+libcmini.${TOOL_PREFIX}.ok:
 	rm -rf libcmini-${LIBCMINI_BRANCH}
 	tar xzf libcmini.tar.gz
 ifeq ($(TOOL_PREFIX),m68k-atari-mintelf)
@@ -231,7 +242,7 @@ else
 endif
 	touch $@
 
-sdl_mixer.ok:
+sdl_mixer.${TOOL_PREFIX}.ok:
 	rm -rf SDL_mixer-${SDL_MIXER_BRANCH}
 	tar xzf sdl_mixer.tar.gz
 	cd SDL_mixer-${SDL_MIXER_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -241,7 +252,7 @@ sdl_mixer.ok:
 	done
 	touch $@
 
-asap.ok:
+asap.${TOOL_PREFIX}.ok:
 	rm -rf asap-${ASAP_VERSION}
 	tar xzf asap.tar.gz
 	cd asap-${ASAP_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -251,7 +262,7 @@ asap.ok:
 	done
 	touch $@
 
-mpg123.ok:
+mpg123.${TOOL_PREFIX}.ok:
 	rm -rf mpg123-${MPG123_VERSION}
 	tar xjf mpg123.tar.bz2
 	cd mpg123-${MPG123_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -265,7 +276,7 @@ mpg123.ok:
 # FMST doesn't compile: OT_OPN and CO_YM2203 are undefined
 # C17 -> C11: gcc 7 has no -std=c17 and nFM uses nothing beyond C11
 # nFM overwrites CMAKE_C_FLAGS: pass $$cflags in M68K_CFLAGS, placed after its -m${M68K_CPU}
-nfm.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake nfm.patch
+nfm.${TOOL_PREFIX}.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake nfm.patch
 	rm -rf nfm-${NFM_VERSION}
 	tar xzf nfm.tar.gz
 	cd nfm-${NFM_VERSION} && cat ../nfm.patch | patch -p1 \
