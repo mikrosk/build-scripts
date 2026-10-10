@@ -4,8 +4,16 @@ SYS_ROOT		:= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
 JOBS			:= -j$(shell nproc)
 MULTILIBS		:= $(shell $(TOOL_PREFIX)-gcc -print-multi-lib | grep -v mshort | tr ';' ':')
 
-# per multilib: $$libdir/$$bindir are the install directories, $$flags the gcc flags
-ML_SETUP		= dir=$${ml%%:*}; dir=$${dir\#.}; libdir=${SYS_ROOT}/usr/lib$${dir:+/$$dir}; bindir=${SYS_ROOT}/usr/bin$${dir:+/$$dir}; flags=$$(echo $${ml\#*:} | sed 's/@/ -/g; s/^ //');
+# -mtune=68060 lets gcc convert float to int with fintrz instead of switching
+# the FPCR rounding mode (68040 tuning); it must follow -m68020-60, which resets it
+CFLAGS_68000	:= -O2 -fomit-frame-pointer
+CFLAGS_68020_60	:= -O2 -fomit-frame-pointer -mtune=68060
+CFLAGS_CF		:= -O2 -fomit-frame-pointer
+
+# per multilib: $$libdir/$$bindir are the install directories, $$flags the gcc flags,
+# $$cflags the gcc flags followed by the matching CFLAGS_*
+ML_SETUP		= dir=$${ml%%:*}; dir=$${dir\#.}; libdir=${SYS_ROOT}/usr/lib$${dir:+/$$dir}; bindir=${SYS_ROOT}/usr/bin$${dir:+/$$dir}; flags=$$(echo $${ml\#*:} | sed 's/@/ -/g; s/^ //'); \
+				  case "$$flags" in *-m68020-60*) cflags="$$flags $(CFLAGS_68020_60)";; *-mcpu=5475*) cflags="$$flags $(CFLAGS_CF)";; *) cflags="$$flags $(CFLAGS_68000)";; esac;
 
 ZLIB_VERSION	= 1.3.2
 GEMLIB_BRANCH	= master
@@ -103,7 +111,7 @@ zlib.ok:
 	tar xzf zlib.tar.gz
 	sed -i -e 's/CFLAGS="$${CFLAGS--O3} -fPIC"/CFLAGS="$${CFLAGS--O3}"/g;' zlib-${ZLIB_VERSION}/configure
 	cd zlib-${ZLIB_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
-		CFLAGS="-O2 -fomit-frame-pointer $$flags" CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar RANLIB=${TOOL_PREFIX}-ranlib ./configure --prefix=${SYS_ROOT}/usr --libdir=$$libdir \
+		CFLAGS="$$cflags" CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar RANLIB=${TOOL_PREFIX}-ranlib ./configure --prefix=${SYS_ROOT}/usr --libdir=$$libdir \
 			&& make $(JOBS) && make install && make distclean || exit 1; \
 	done
 	touch $@
@@ -134,7 +142,7 @@ osmesa.ok: osmesa.patch
 	rm -rf Mesa-${OSMESA_VERSION}
 	tar xjf osmesa.tar.bz2
 	cd Mesa-${OSMESA_VERSION} && cat ../osmesa.patch | patch -p1 && for ml in $(MULTILIBS); do $(ML_SETUP) \
-		CFLAGS="-O2 -fomit-frame-pointer $$flags" CXXFLAGS="-O2 -fomit-frame-pointer $$flags" ./configure --host=${TOOL_PREFIX} --without-x --enable-static --disable-shared --with-driver=osmesa --disable-egl --disable-glu --disable-glw --disable-gallium --prefix=${SYS_ROOT}/usr --libdir=$$libdir \
+		CFLAGS="$$cflags" CXXFLAGS="$$cflags" ./configure --host=${TOOL_PREFIX} --without-x --enable-static --disable-shared --with-driver=osmesa --disable-egl --disable-glu --disable-glw --disable-gallium --prefix=${SYS_ROOT}/usr --libdir=$$libdir \
 			&& make $(JOBS) && make install && ${TOOL_PREFIX}-ranlib $$libdir/libOSMesa.a && make distclean || exit 1; \
 	done
 	touch $@
@@ -146,7 +154,7 @@ sdl.ok:
 # SDL_config.h depends on -mfastcall (LDG is disabled), so install one per calling convention
 	cd SDL-1.2-${SDL_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
 		case "$$flags" in *-mfastcall*) cfg=mfastcall;; *) cfg=default;; esac; \
-		CFLAGS="-O2 -fomit-frame-pointer $$flags" ./configure --host=${TOOL_PREFIX} --disable-threads --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
+		CFLAGS="$$cflags" ./configure --host=${TOOL_PREFIX} --disable-threads --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
 			&& make $(JOBS) && make install \
 			&& mv ${SYS_ROOT}/usr/include/SDL/SDL_config.h ${SYS_ROOT}/usr/include/SDL/SDL_config-$$cfg.h \
 			&& make distclean || exit 1; \
@@ -159,7 +167,7 @@ libxmp.ok: libxmp.patch
 	rm -rf libxmp-${LIBXMP_VERSION}
 	tar xzf libxmp.tar.gz
 	cd libxmp-${LIBXMP_VERSION} && cat ../libxmp.patch | patch -p1 && for ml in $(MULTILIBS); do $(ML_SETUP) \
-		CFLAGS="-O2 -fomit-frame-pointer $$flags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
+		CFLAGS="$$cflags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
 			&& make $(JOBS) && make install && make distclean || exit 1; \
 	done
 	touch $@
@@ -168,7 +176,7 @@ libxmp-lite.ok: libxmp-lite.patch
 	rm -rf libxmp-lite-${LIBXMP_VERSION}
 	tar xzf libxmp-lite.tar.gz
 	cd libxmp-lite-${LIBXMP_VERSION} && cat ../libxmp-lite.patch | patch -p1 && for ml in $(MULTILIBS); do $(ML_SETUP) \
-		CFLAGS="-O2 -fomit-frame-pointer $$flags" ./configure --host=${TOOL_PREFIX} --disable-it --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
+		CFLAGS="$$cflags" ./configure --host=${TOOL_PREFIX} --disable-it --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
 			&& make $(JOBS) && make install && make distclean || exit 1; \
 	done
 	touch $@
@@ -178,7 +186,7 @@ physfs.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake
 	tar xzf physfs.tar.gz
 	cd physfs-${PHYSFS_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
 		rm -rf build && mkdir build && cd build \
-			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint-${TOOL_PREFIX}.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fomit-frame-pointer $$flags" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=$$libdir -DCMAKE_INSTALL_BINDIR=$$bindir .. \
+			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint-${TOOL_PREFIX}.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$$cflags" -DPHYSFS_BUILD_SHARED=0 -DCMAKE_INSTALL_PREFIX=${SYS_ROOT}/usr -DCMAKE_INSTALL_LIBDIR=$$libdir -DCMAKE_INSTALL_BINDIR=$$bindir .. \
 			&& make $(JOBS) VERBOSE=1 && make install && cd .. || exit 1; \
 	done
 	touch $@
@@ -195,7 +203,7 @@ libpng.ok:
 	rm -rf libpng-${LIBPNG_VERSION}
 	tar xzf libpng.tar.gz
 	cd libpng-${LIBPNG_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
-		CFLAGS="-O2 -fomit-frame-pointer $$flags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
+		CFLAGS="$$cflags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
 			&& make $(JOBS) && make install && make distclean || exit 1; \
 	done
 	touch $@
@@ -204,7 +212,7 @@ sdl_image.ok:
 	rm -rf SDL_image-${SDL_IMAGE_BRANCH}
 	tar xzf sdl_image.tar.gz
 	cd SDL_image-${SDL_IMAGE_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
-		PKG_CONFIG_LIBDIR=$$libdir/pkgconfig CFLAGS="-O2 -fomit-frame-pointer $$flags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
+		PKG_CONFIG_LIBDIR=$$libdir/pkgconfig CFLAGS="$$cflags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
 			&& make $(JOBS) && make install && make distclean || exit 1; \
 	done
 	touch $@
@@ -227,7 +235,7 @@ sdl_mixer.ok:
 	rm -rf SDL_mixer-${SDL_MIXER_BRANCH}
 	tar xzf sdl_mixer.tar.gz
 	cd SDL_mixer-${SDL_MIXER_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
-		PKG_CONFIG_LIBDIR=$$libdir/pkgconfig CFLAGS="-O2 -fomit-frame-pointer $$flags" LDFLAGS="$$flags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
+		PKG_CONFIG_LIBDIR=$$libdir/pkgconfig CFLAGS="$$cflags" LDFLAGS="$$flags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --bindir=$$bindir \
 			--disable-music-mod --disable-music-timidity-midi --disable-music-fluidsynth-midi --disable-music-ogg --disable-music-flac --disable-music-mp3 \
 			&& make $(JOBS) && make install && make distclean || exit 1; \
 	done
@@ -237,8 +245,8 @@ asap.ok:
 	rm -rf asap-${ASAP_VERSION}
 	tar xzf asap.tar.gz
 	cd asap-${ASAP_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
-		make $(JOBS) CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS="-O2 -fomit-frame-pointer $$flags" prefix=${SYS_ROOT}/usr libdir=$$libdir bindir=$$bindir \
-			&& make CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS="-O2 -fomit-frame-pointer $$flags" prefix=${SYS_ROOT}/usr libdir=$$libdir bindir=$$bindir install \
+		make $(JOBS) CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS="$$cflags" prefix=${SYS_ROOT}/usr libdir=$$libdir bindir=$$bindir \
+			&& make CC=${TOOL_PREFIX}-gcc AR=${TOOL_PREFIX}-ar CFLAGS="$$cflags" prefix=${SYS_ROOT}/usr libdir=$$libdir bindir=$$bindir install \
 			&& rm asap.o libasap.a asapconv || exit 1; \
 	done
 	touch $@
@@ -248,7 +256,7 @@ mpg123.ok:
 	tar xjf mpg123.tar.bz2
 	cd mpg123-${MPG123_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
 		case "$$flags" in *m68020-60*|*mcpu=5475*) cpu=generic_fpu;; *) cpu=generic_nofpu;; esac; \
-		CFLAGS="-O2 -fomit-frame-pointer $$flags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --with-cpu=$$cpu \
+		CFLAGS="$$cflags" ./configure --host=${TOOL_PREFIX} --prefix=${SYS_ROOT}/usr --libdir=$$libdir --with-cpu=$$cpu \
 			--disable-components --enable-libmpg123 --enable-network=no --disable-gapless --disable-feeder --disable-new-huffman --disable-messages --disable-equalizer --disable-32bit --disable-real --disable-feature_report --disable-largefile --with-seektable=0 \
 			&& make $(JOBS) && make install && make distclean || exit 1; \
 	done
@@ -256,17 +264,18 @@ mpg123.ok:
 
 # FMST doesn't compile: OT_OPN and CO_YM2203 are undefined
 # C17 -> C11: gcc 7 has no -std=c17 and nFM uses nothing beyond C11
+# nFM overwrites CMAKE_C_FLAGS: pass $$cflags in M68K_CFLAGS, placed after its -m${M68K_CPU}
 nfm.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake nfm.patch
 	rm -rf nfm-${NFM_VERSION}
 	tar xzf nfm.tar.gz
 	cd nfm-${NFM_VERSION} && cat ../nfm.patch | patch -p1 \
-		&& grep -rlZ --include=CMakeLists.txt --include='*.cmake' AtariTOS . | xargs -0 sed -i 's/AtariTOS/FreeMiNT/g; s/CMAKE_C_STANDARD 17/CMAKE_C_STANDARD 11/; s/-std=c17/-std=c11/' \
+		&& grep -rlZ --include=CMakeLists.txt --include='*.cmake' AtariTOS . | xargs -0 sed -i 's/AtariTOS/FreeMiNT/g; s/CMAKE_C_STANDARD 17/CMAKE_C_STANDARD 11/; s/-std=c17/-std=c11/; s/-m\$${M68K_CPU} /&$${M68K_CFLAGS} /' \
 		&& grep -rlZ --include=CMakeLists.txt 'cmake_minimum_required(VERSION 3\.31)' . | xargs -0 sed -i 's/cmake_minimum_required(VERSION 3\.31)/cmake_minimum_required(VERSION 3.30)/' \
 		&& for ml in $(MULTILIBS); do $(ML_SETUP) \
 		case "$$flags" in "") cpu=68000;; "-m68020-60") cpu=68020-60;; "-mfastcall") cpu=68000;; "-m68020-60 -mfastcall") cpu=68020-60;; *) continue;; esac; \
 		case "$$flags" in *-mfastcall*) fastcall=ON;; *) fastcall=OFF;; esac; \
 		rm -rf build && mkdir build && cd build \
-			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint-${TOOL_PREFIX}.cmake -DCMAKE_BUILD_TYPE=Final -DM68K_CPU=$$cpu -DM68K_FASTCALL=$$fastcall -DTOS_CRT=stdlib \
+			&& cmake -DCMAKE_TOOLCHAIN_FILE=../../freemint-${TOOL_PREFIX}.cmake -DCMAKE_BUILD_TYPE=Final -DM68K_CPU=$$cpu -DM68K_FASTCALL=$$fastcall -DM68K_CFLAGS="$$cflags" -DTOS_CRT=stdlib \
 				-DCMAKE_MODULE_PATH=$$PWD/../cmake.inc/modules -DCMAKE_ASM_VASM_COMPILER_ELF=$(if $(filter %mintelf,$(TOOL_PREFIX)),TRUE,FALSE) \
 				-DNFM_ENABLE_DRIVER_NOKTURNFM=ON -DNFM_ENABLE_DRIVER_SB=ON -DNFM_ENABLE_DRIVER_NULL=ON -DNFM_ENABLE_DRIVER_NULL_NATFEATS_EXTENSION=ON -DNFM_ENABLE_DRIVER_OPLL=ON \
 				-DNFM_ENABLE_DRIVER_RW_OPL3_EXPRESS=ON -DNFM_ENABLE_DRIVER_OPL3DUO=ON -DNFM_ENABLE_DRIVER_OPLXLPT=ON -DNFM_ENABLE_DRIVER_NUKED_OPL3=OFF -DNFM_ENABLE_DRIVER_FMST=OFF \
