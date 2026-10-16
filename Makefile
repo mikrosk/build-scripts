@@ -28,6 +28,7 @@ CFLIB_BRANCH	= master
 LIBPNG_VERSION	= 1.6.58
 SDL_IMAGE_BRANCH= SDL-1.2
 USOUND_BRANCH	= main
+UMIDI_BRANCH	= main
 LIBCMINI_BRANCH	= master
 SDL_MIXER_BRANCH= SDL-1.2
 ASAP_VERSION	= 8.0.0
@@ -46,6 +47,7 @@ CFLIB_URL		= https://github.com/freemint/cflib/archive/refs/heads/${CFLIB_BRANCH
 LIBPNG_URL		= https://download.sourceforge.net/libpng/libpng-${LIBPNG_VERSION}.tar.gz
 SDL_IMAGE_URL	= https://github.com/libsdl-org/SDL_image/archive/refs/heads/${SDL_IMAGE_BRANCH}.tar.gz
 USOUND_URL		= https://raw.githubusercontent.com/mikrosk/usound/${USOUND_BRANCH}/usound.h
+UMIDI_URL		= https://raw.githubusercontent.com/mikrosk/umidi/${UMIDI_BRANCH}/umidi.h
 LIBCMINI_URL	= https://github.com/freemint/libcmini/archive/refs/heads/${LIBCMINI_BRANCH}.tar.gz
 SDL_MIXER_URL	= https://github.com/libsdl-org/SDL_mixer/archive/refs/heads/${SDL_MIXER_BRANCH}.tar.gz
 ASAP_URL		= https://sourceforge.net/projects/asap/files/asap/${ASAP_VERSION}/asap-${ASAP_VERSION}.tar.gz/download
@@ -56,7 +58,7 @@ NFM_URL			= https://framagit.org/nokturnal/nfm/-/archive/${NFM_VERSION}/nfm-${NF
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz usound.h osmesa.tar.bz2 sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2 nfm.tar.gz
+download: zlib.tar.gz gemlib.tar.gz usound.h umidi.h osmesa.tar.bz2 sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2 nfm.tar.gz
 
 zlib.tar.gz:
 	wget -q -O $@ $(ZLIB_URL) || { rm -f $@; exit 1; }
@@ -66,6 +68,9 @@ gemlib.tar.gz:
 
 usound.h:
 	wget -q -O $@ $(USOUND_URL) || { rm -f $@; exit 1; }
+
+umidi.h:
+	wget -q -O $@ $(UMIDI_URL) || { rm -f $@; exit 1; }
 
 osmesa.tar.bz2:
 	wget -q -O $@ $(OSMESA_URL) || { rm -f $@; exit 1; }
@@ -106,7 +111,7 @@ mpg123.tar.bz2:
 nfm.tar.gz:
 	wget -q -O $@ $(NFM_URL) || { rm -f $@; exit 1; }
 
-PROJECTS		:= zlib gemlib ldg usound osmesa sdl libxmp libxmp-lite physfs cflib libpng sdl_image libcmini sdl_mixer asap mpg123 nfm
+PROJECTS		:= zlib gemlib ldg usound umidi osmesa sdl libxmp libxmp-lite physfs cflib libpng sdl_image libcmini sdl_mixer asap mpg123 nfm
 
 # toolchains are built one after another: all of them share the same source directories
 .PHONY: build
@@ -147,6 +152,10 @@ ldg.${TOOL_PREFIX}.ok:
 
 usound.${TOOL_PREFIX}.ok:
 	install -C -m 644 usound.h ${SYS_ROOT}/usr/include
+	touch $@
+
+umidi.${TOOL_PREFIX}.ok:
+	install -C -m 644 umidi.h ${SYS_ROOT}/usr/include
 	touch $@
 
 osmesa.${TOOL_PREFIX}.ok: osmesa.patch
@@ -300,6 +309,6 @@ nfm.${TOOL_PREFIX}.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake nfm
 .PHONY: clean
 clean:
 	rm -f *.ok *.tar.gz *.tar.bz2
-	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} usound.h SDL-1.2-${SDL_BRANCH} \
+	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} usound.h umidi.h SDL-1.2-${SDL_BRANCH} \
 		libxmp-${LIBXMP_VERSION} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} libcmini-${LIBCMINI_BRANCH} \
 		SDL_mixer-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION} Mesa-${OSMESA_VERSION} nfm-${NFM_VERSION}

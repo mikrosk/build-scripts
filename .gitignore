@@ -13,6 +13,7 @@ cflib-master/
 libpng-?.?.??/
 SDL_image-SDL-1.2/
 usound.h
+umidi.h
 libcmini-master/
 SDL_mixer-SDL-1.2/
 asap-?.?.?/
