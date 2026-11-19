@@ -1,11 +1,17 @@
 TOOLCHAINS		:= m68k-atari-mint m68k-atari-mintelf
 JOBS			:= -j$(shell nproc)
 
-# TOOL_PREFIX is set only in the per-toolchain sub-make started by 'build'
-ifdef TOOL_PREFIX
-SYS_ROOT		:= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
-MULTILIBS		:= $(shell $(TOOL_PREFIX)-gcc -print-multi-lib | grep -v mshort | tr ';' ':')
-endif
+SOURCES			:= zlib.tar.gz gemlib.tar.gz ldg usound.h umidi.h osmesa.tar.bz2 sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz \
+				   libpng.tar.gz sdl_image.tar.gz libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2 nfm.tar.gz
+PROJECTS		:= $(foreach s,$(SOURCES),$(firstword $(subst ., ,$(s))))
+DOWNLOADS		:= $(filter-out ldg,$(SOURCES))
+
+.NOTPARALLEL:
+
+# '%' in the <project>.%.ok rules below matches the toolchain
+TOOL_PREFIX		= $*
+SYS_ROOT		= $(shell $(TOOL_PREFIX)-gcc -print-sysroot)
+MULTILIBS		= $(shell $(TOOL_PREFIX)-gcc -print-multi-lib | grep -v mshort | tr ';' ':')
 
 # -mtune=68060 lets gcc convert float to int with fintrz instead of switching
 # the FPCR rounding mode (68040 tuning); it must follow -m68020-60, which resets it
@@ -58,71 +64,19 @@ NFM_URL			= https://framagit.org/nokturnal/nfm/-/archive/${NFM_VERSION}/nfm-${NF
 default: download build
 
 .PHONY: download
-download: zlib.tar.gz gemlib.tar.gz usound.h umidi.h osmesa.tar.bz2 sdl.tar.gz libxmp.tar.gz libxmp-lite.tar.gz physfs.tar.gz cflib.tar.gz libpng.tar.gz sdl_image.tar.gz libcmini.tar.gz sdl_mixer.tar.gz asap.tar.gz mpg123.tar.bz2 nfm.tar.gz
+download: $(DOWNLOADS)
 
-zlib.tar.gz:
-	wget -q -O $@ $(ZLIB_URL) || { rm -f $@; exit 1; }
+$(DOWNLOADS):
+	wget -q -O $@ $($(shell echo $@ | cut -d. -f1 | tr a-z- A-Z_)_URL) || { rm -f $@; exit 1; }
 
-gemlib.tar.gz:
-	wget -q -O $@ $(GEMLIB_URL) || { rm -f $@; exit 1; }
+.PHONY: build $(TOOLCHAINS)
+build: $(TOOLCHAINS)
+# m68k-atari-mint: zlib.m68k-atari-mint.ok gemlib.m68k-atari-mint.ok ...
+$(foreach tc,$(TOOLCHAINS),$(eval $(tc): $(PROJECTS:%=%.$(tc).ok)))
+# zlib.m68k-atari-mint.ok zlib.m68k-atari-mintelf.ok: zlib.tar.gz
+$(foreach d,$(DOWNLOADS),$(eval $(TOOLCHAINS:%=$(firstword $(subst ., ,$(d))).%.ok): $(d)))
 
-usound.h:
-	wget -q -O $@ $(USOUND_URL) || { rm -f $@; exit 1; }
-
-umidi.h:
-	wget -q -O $@ $(UMIDI_URL) || { rm -f $@; exit 1; }
-
-osmesa.tar.bz2:
-	wget -q -O $@ $(OSMESA_URL) || { rm -f $@; exit 1; }
-
-sdl.tar.gz:
-	wget -q -O $@ $(SDL_URL) || { rm -f $@; exit 1; }
-
-libxmp.tar.gz:
-	wget -q -O $@ $(LIBXMP_URL) || { rm -f $@; exit 1; }
-
-libxmp-lite.tar.gz:
-	wget -q -O $@ $(LIBXMP_LITE_URL) || { rm -f $@; exit 1; }
-
-physfs.tar.gz:
-	wget -q -O $@ $(PHYSFS_URL) || { rm -f $@; exit 1; }
-
-cflib.tar.gz:
-	wget -q -O $@ $(CFLIB_URL) || { rm -f $@; exit 1; }
-
-libpng.tar.gz:
-	wget -q -O $@ $(LIBPNG_URL) || { rm -f $@; exit 1; }
-
-sdl_image.tar.gz:
-	wget -q -O $@ $(SDL_IMAGE_URL) || { rm -f $@; exit 1; }
-
-libcmini.tar.gz:
-	wget -q -O $@ $(LIBCMINI_URL) || { rm -f $@; exit 1; }
-
-sdl_mixer.tar.gz:
-	wget -q -O $@ $(SDL_MIXER_URL) || { rm -f $@; exit 1; }
-
-asap.tar.gz:
-	wget -q -O $@ $(ASAP_URL) || { rm -f $@; exit 1; }
-
-mpg123.tar.bz2:
-	wget -q -O $@ $(MPG123_URL) || { rm -f $@; exit 1; }
-
-nfm.tar.gz:
-	wget -q -O $@ $(NFM_URL) || { rm -f $@; exit 1; }
-
-PROJECTS		:= zlib gemlib ldg usound umidi osmesa sdl libxmp libxmp-lite physfs cflib libpng sdl_image libcmini sdl_mixer asap mpg123 nfm
-
-# toolchains are built one after another: all of them share the same source directories
-.PHONY: build
-ifdef TOOL_PREFIX
-build: $(PROJECTS:%=%.$(TOOL_PREFIX).ok)
-else
-build:
-	for tc in $(TOOLCHAINS); do $(MAKE) TOOL_PREFIX=$$tc build || exit 1; done
-endif
-
-zlib.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=zlib.%.ok): zlib.%.ok:
 	rm -rf zlib-${ZLIB_VERSION}
 	tar xzf zlib.tar.gz
 	sed -i -e 's/CFLAGS="$${CFLAGS--O3} -fPIC"/CFLAGS="$${CFLAGS--O3}"/g;' zlib-${ZLIB_VERSION}/configure
@@ -132,7 +86,7 @@ zlib.${TOOL_PREFIX}.ok:
 	done
 	touch $@
 
-gemlib.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=gemlib.%.ok): gemlib.%.ok:
 	rm -rf gemlib-${GEMLIB_BRANCH}
 	tar xzf gemlib.tar.gz
 	cd gemlib-${GEMLIB_BRANCH} \
@@ -140,7 +94,7 @@ gemlib.${TOOL_PREFIX}.ok:
 		&& make CROSS_TOOL=${TOOL_PREFIX} DESTDIR=${SYS_ROOT} PREFIX=/usr V=1 install
 	touch $@
 
-ldg.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=ldg.%.ok): ldg.%.ok:
 	rm -rf ldg-${LDG_BRANCH}
 	svn export ${LDG_URL} ldg-${LDG_BRANCH}
 	cd ldg-${LDG_BRANCH}/src/devel \
@@ -150,15 +104,15 @@ ldg.${TOOL_PREFIX}.ok:
 		&& cp -ra ../../lib/gcc/* ${SYS_ROOT}/usr/lib && cp -ra ../../include ${SYS_ROOT}/usr
 	touch $@
 
-usound.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=usound.%.ok): usound.%.ok:
 	install -C -m 644 usound.h ${SYS_ROOT}/usr/include
 	touch $@
 
-umidi.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=umidi.%.ok): umidi.%.ok:
 	install -C -m 644 umidi.h ${SYS_ROOT}/usr/include
 	touch $@
 
-osmesa.${TOOL_PREFIX}.ok: osmesa.patch
+$(TOOLCHAINS:%=osmesa.%.ok): osmesa.%.ok: osmesa.patch
 	rm -rf Mesa-${OSMESA_VERSION}
 	tar xjf osmesa.tar.bz2
 	cd Mesa-${OSMESA_VERSION} && cat ../osmesa.patch | patch -p1 && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -167,7 +121,7 @@ osmesa.${TOOL_PREFIX}.ok: osmesa.patch
 	done
 	touch $@
 
-sdl.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=sdl.%.ok): sdl.%.ok:
 	rm -rf SDL-1.2-${SDL_BRANCH}
 	tar xzf sdl.tar.gz
 	rm -f ${SYS_ROOT}/usr/include/SDL/SDL_config-*.h
@@ -183,7 +137,7 @@ sdl.${TOOL_PREFIX}.ok:
 		> ${SYS_ROOT}/usr/include/SDL/SDL_config.h
 	touch $@
 
-libxmp.${TOOL_PREFIX}.ok: libxmp.patch
+$(TOOLCHAINS:%=libxmp.%.ok): libxmp.%.ok: libxmp.patch
 	rm -rf libxmp-${LIBXMP_VERSION}
 	tar xzf libxmp.tar.gz
 	cd libxmp-${LIBXMP_VERSION} && cat ../libxmp.patch | patch -p1 && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -192,7 +146,7 @@ libxmp.${TOOL_PREFIX}.ok: libxmp.patch
 	done
 	touch $@
 
-libxmp-lite.${TOOL_PREFIX}.ok: libxmp-lite.patch
+$(TOOLCHAINS:%=libxmp-lite.%.ok): libxmp-lite.%.ok: libxmp-lite.patch
 	rm -rf libxmp-lite-${LIBXMP_VERSION}
 	tar xzf libxmp-lite.tar.gz
 	cd libxmp-lite-${LIBXMP_VERSION} && cat ../libxmp-lite.patch | patch -p1 && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -201,7 +155,7 @@ libxmp-lite.${TOOL_PREFIX}.ok: libxmp-lite.patch
 	done
 	touch $@
 
-physfs.${TOOL_PREFIX}.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake
+$(TOOLCHAINS:%=physfs.%.ok): physfs.%.ok: freemint-%.cmake Platform/FreeMiNT.cmake
 	rm -rf physfs-${PHYSFS_BRANCH}
 	tar xzf physfs.tar.gz
 	cd physfs-${PHYSFS_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -211,7 +165,7 @@ physfs.${TOOL_PREFIX}.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake
 	done
 	touch $@
 
-cflib.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=cflib.%.ok): cflib.%.ok:
 	rm -rf cflib-${CFLIB_BRANCH}
 	tar xzf cflib.tar.gz
 	cd cflib-${CFLIB_BRANCH} \
@@ -219,7 +173,7 @@ cflib.${TOOL_PREFIX}.ok:
 		&& make CROSS_TOOL=${TOOL_PREFIX} DESTDIR=${SYS_ROOT} PREFIX=/usr V=1 install
 	touch $@
 
-libpng.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=libpng.%.ok): libpng.%.ok:
 	rm -rf libpng-${LIBPNG_VERSION}
 	tar xzf libpng.tar.gz
 	cd libpng-${LIBPNG_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -228,7 +182,7 @@ libpng.${TOOL_PREFIX}.ok:
 	done
 	touch $@
 
-sdl_image.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=sdl_image.%.ok): sdl_image.%.ok:
 	rm -rf SDL_image-${SDL_IMAGE_BRANCH}
 	tar xzf sdl_image.tar.gz
 	cd SDL_image-${SDL_IMAGE_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -237,21 +191,16 @@ sdl_image.${TOOL_PREFIX}.ok:
 	done
 	touch $@
 
-libcmini.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=libcmini.%.ok): libcmini.%.ok:
 	rm -rf libcmini-${LIBCMINI_BRANCH}
 	tar xzf libcmini.tar.gz
-ifeq ($(TOOL_PREFIX),m68k-atari-mintelf)
 	cd libcmini-${LIBCMINI_BRANCH} \
-		&& make $(JOBS) PREFIX=${SYS_ROOT}/opt/libcmini BUILD_SOFT_FLOAT=N COMPILE_ELF=Y VERBOSE=yes \
-		&& make PREFIX=${SYS_ROOT}/opt/libcmini BUILD_SOFT_FLOAT=N COMPILE_ELF=Y VERBOSE=yes install
-else
-	cd libcmini-${LIBCMINI_BRANCH} \
-		&& make $(JOBS) PREFIX=${SYS_ROOT}/opt/libcmini BUILD_FAST=N BUILD_SOFT_FLOAT=N COMPILE_ELF=N VERBOSE=yes \
-		&& make PREFIX=${SYS_ROOT}/opt/libcmini BUILD_FAST=N BUILD_SOFT_FLOAT=N COMPILE_ELF=N VERBOSE=yes install
-endif
+		&& case ${TOOL_PREFIX} in *mintelf) flags="COMPILE_ELF=Y";; *) flags="BUILD_FAST=N COMPILE_ELF=N";; esac \
+		&& make $(JOBS) PREFIX=${SYS_ROOT}/opt/libcmini $$flags BUILD_SOFT_FLOAT=N VERBOSE=yes \
+		&& make PREFIX=${SYS_ROOT}/opt/libcmini $$flags BUILD_SOFT_FLOAT=N VERBOSE=yes install
 	touch $@
 
-sdl_mixer.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=sdl_mixer.%.ok): sdl_mixer.%.ok:
 	rm -rf SDL_mixer-${SDL_MIXER_BRANCH}
 	tar xzf sdl_mixer.tar.gz
 	cd SDL_mixer-${SDL_MIXER_BRANCH} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -261,7 +210,7 @@ sdl_mixer.${TOOL_PREFIX}.ok:
 	done
 	touch $@
 
-asap.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=asap.%.ok): asap.%.ok:
 	rm -rf asap-${ASAP_VERSION}
 	tar xzf asap.tar.gz
 	cd asap-${ASAP_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -271,7 +220,7 @@ asap.${TOOL_PREFIX}.ok:
 	done
 	touch $@
 
-mpg123.${TOOL_PREFIX}.ok:
+$(TOOLCHAINS:%=mpg123.%.ok): mpg123.%.ok:
 	rm -rf mpg123-${MPG123_VERSION}
 	tar xjf mpg123.tar.bz2
 	cd mpg123-${MPG123_VERSION} && for ml in $(MULTILIBS); do $(ML_SETUP) \
@@ -285,7 +234,7 @@ mpg123.${TOOL_PREFIX}.ok:
 # FMST doesn't compile: OT_OPN and CO_YM2203 are undefined
 # C17 -> C11: gcc 7 has no -std=c17 and nFM uses nothing beyond C11
 # nFM overwrites CMAKE_C_FLAGS: pass $$cflags in M68K_CFLAGS, placed after its -m${M68K_CPU}
-nfm.${TOOL_PREFIX}.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake nfm.patch
+$(TOOLCHAINS:%=nfm.%.ok): nfm.%.ok: freemint-%.cmake Platform/FreeMiNT.cmake nfm.patch
 	rm -rf nfm-${NFM_VERSION}
 	tar xzf nfm.tar.gz
 	cd nfm-${NFM_VERSION} && cat ../nfm.patch | patch -p1 \
@@ -308,7 +257,7 @@ nfm.${TOOL_PREFIX}.ok: freemint-${TOOL_PREFIX}.cmake Platform/FreeMiNT.cmake nfm
 
 .PHONY: clean
 clean:
-	rm -f *.ok *.tar.gz *.tar.bz2
-	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} usound.h umidi.h SDL-1.2-${SDL_BRANCH} \
+	rm -f *.ok $(DOWNLOADS)
+	rm -rf zlib-${ZLIB_VERSION} gemlib-${GEMLIB_BRANCH} ldg-${LDG_BRANCH} SDL-1.2-${SDL_BRANCH} \
 		libxmp-${LIBXMP_VERSION} libxmp-lite-${LIBXMP_VERSION} physfs-${PHYSFS_BRANCH} cflib-${CFLIB_BRANCH} libpng-${LIBPNG_VERSION} SDL_image-${SDL_IMAGE_BRANCH} libcmini-${LIBCMINI_BRANCH} \
 		SDL_mixer-${SDL_MIXER_BRANCH} asap-${ASAP_VERSION} mpg123-${MPG123_VERSION} Mesa-${OSMESA_VERSION} nfm-${NFM_VERSION}
