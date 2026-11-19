@@ -24,20 +24,20 @@ CFLAGS_CF		:= -O2 -fomit-frame-pointer
 ML_SETUP		= dir=$${ml%%:*}; dir=$${dir\#.}; libdir=${SYS_ROOT}/usr/lib$${dir:+/$$dir}; bindir=${SYS_ROOT}/usr/bin$${dir:+/$$dir}; flags=$$(echo $${ml\#*:} | sed 's/@/ -/g; s/^ //'); \
 				  case "$$flags" in *-m68020-60*) cflags="$$flags $(CFLAGS_68020_60)";; *-mcpu=5475*) cflags="$$flags $(CFLAGS_CF)";; *) cflags="$$flags $(CFLAGS_68000)";; esac;
 
-ZLIB_VERSION	= 1.3.2
+ZLIB_VERSION	= 1.4
 GEMLIB_BRANCH	= master
 SDL_BRANCH		= main
-LIBXMP_VERSION	= 4.7.3
+LIBXMP_VERSION	= 4.7.4
 LDG_BRANCH		= trunk
 PHYSFS_BRANCH	= m68k-atari-mint
 CFLIB_BRANCH	= master
-LIBPNG_VERSION	= 1.6.58
+LIBPNG_VERSION	= 1.6.59
 SDL_IMAGE_BRANCH= SDL-1.2
 USOUND_BRANCH	= main
 UMIDI_BRANCH	= main
 LIBCMINI_BRANCH	= master
 SDL_MIXER_BRANCH= SDL-1.2
-ASAP_VERSION	= 8.0.0
+ASAP_VERSION	= 8.0.1
 MPG123_VERSION	= 1.33.7
 OSMESA_VERSION	= 7.7.1
 NFM_VERSION		= 0.4.0
